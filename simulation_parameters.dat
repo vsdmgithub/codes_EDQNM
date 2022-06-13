@@ -1,9 +1,0 @@
-N - Shells 
-61
-dt Time step of the simulation
-0.00001
-T - Total time of the simulation
-10.0
-S - No of saves to be made
-10
-
