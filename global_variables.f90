@@ -13,7 +13,7 @@
 ! -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 ! #########################
 ! MODULE: global_variables
-! LAST MODIFIED: 16 November 2020
+! LAST MODIFIED: 05 January 2021
 ! #########################
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 ! GLOBAL VARIABLES FOR EDQNM EQUATION
@@ -37,7 +37,7 @@ MODULE global_variables
     ! SPACE VARIABLES
     ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	INTEGER (KIND=4)::N
-	INTEGER (KIND=4)::k_ind,q_ind,p_ind
+	INTEGER (KIND=4)::k_ind,q_ind,p_ind    
 	INTEGER (KIND=4)::k2_ind
     ! ---------------------------------------------------------
     DOUBLE PRECISION::mom_base
@@ -136,7 +136,10 @@ MODULE global_variables
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         ! S  P  E  C  T  R  U  M        A  N  D         T  I  M  E  
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-      
+
+!        N       =   61
+        ! No of discrete wavenumbers, which will form shells in 3d space with radial width 'dk_i'
+       
         lambda      =   two ** ( 0.25D0 )
         ! Ratio of consecutive shells
 
@@ -182,7 +185,7 @@ MODULE global_variables
 
         !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         !  A  R  R  A  Y     A  L  L  O  C  A  T  I  O  N  
-        !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
+        !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         ALLOCATE ( mom( N ) , mom_band ( N ) )
         ALLOCATE ( t_axis(0 : t_step_total) )
         ALLOCATE ( laplacian_k( N ) ) 
@@ -234,7 +237,7 @@ MODULE global_variables
 
     END
 
-  SUBROUTINE fix_time_step( t_ref, t_fix )
+    SUBROUTINE fix_time_step( t_ref, t_fix )
     ! CALL this to fix a timestep from a reference time, with nice decimal places,
     ! e.g 0.00452 ->  0.002, 0.00123 -> 0.001 , 0.008922 -> 0.005
 

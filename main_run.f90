@@ -13,7 +13,7 @@
 ! -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 ! #########################
 ! MODULE: main
-! LAST MODIFIED: 16 November 2020
+! LAST MODIFIED: 05 January 2021
 ! #########################
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 ! MAIN MODULE FOR EDQNM EQUATION
@@ -66,7 +66,6 @@ MODULE main_run
     ! Call this to check the validity of parameters for the simulation, like time step, etc.,
     ! -------------
     ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
         IMPLICIT NONE
         
         !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -77,7 +76,7 @@ MODULE main_run
             all_set =  1
             
             !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-            !  A  R  R  A  Y        A  L  L  O  C  A  T  I  O  N
+            !  A  R  R  A  Y     A  L  L  O  C  A  T  I  O  N
             !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
             ALLOCATE( spec( N ) )
             ALLOCATE( forcer( N ), forcer_template( N ) )
@@ -98,7 +97,7 @@ MODULE main_run
             CALL make_initial_condition(initial_en, spec)
             ! Calls the subroutine to make a initial condition with normalized energy as 'initial_en'
 
-!           CALL read_initial_condition(initial_en, spec)
+!            CALL read_initial_condition(initial_en, spec)
             ! Calls the subroutine to read a initial condition from file with normalized energy as 'initial_en'
 
             CALL write_details
@@ -106,22 +105,22 @@ MODULE main_run
 
             CALL simulation_data_import(N,t_step_total)
             ! Copies the basic data of simulation to a subroutine in output module for easy saving
-        
+
             file_location=TRIM(ADJUSTL(path_dir))//TRIM(ADJUSTL(name_dir))&
             //TRIM(ADJUSTL(name_sys))//TRIM(ADJUSTL(name_sim))//'/'
             
         ELSE
         
-            all_set =   
-            
+            all_set =   0
+
             WRITE(*,'(A50)'),'----------------------------------------------------------------------'
             WRITE(*,'(A50)'),'ERROR: TIME STEP TOO LARGE'
             WRITE(*,'(A50)'),'----------------------------------------------------------------------'
             WRITE(*,'(A50,ES10.2)'),' RESET THE TIME STEP (AT MAX) AS :',dt_ref
             WRITE(*,'(A50)'),'----------------------------------------------------------------------'
-                    
-        END IF
-        
+
+         END IF
+
     END
     
 	SUBROUTINE write_details
@@ -146,7 +145,7 @@ MODULE main_run
         OPEN(UNIT=233,FILE=TRIM(ADJUSTL(file_address))//'.dat')
 
         WRITE(233,"(A40)"),TRIM(ADJUSTL('--------------------------------------------------------------------'))
-        WRITE(233,"(A40)"),TRIM(ADJUSTL('------  EDQNM  EQUATION----------------------'))
+        WRITE(233,"(A40)"),TRIM(ADJUSTL('------  EDQNM (FRAC) EQUATION----------------------'))
         WRITE(233,"(A40)"),TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
         WRITE(233,"(A40)"),TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
         WRITE(233,"(A40)"),TRIM(ADJUSTL('--------------------------------------------------------------------'))
@@ -154,14 +153,16 @@ MODULE main_run
         WRITE(233,"(A2,A20,A2,ES12.5)")'2.','Time step   ','= ',dt
         WRITE(233,"(A2,A20,A2,I8)")'3.',' Total time steps   ','= ',t_step_total
         WRITE(233,"(A2,A20,A2,F5.2)")'4.','Total time ','= ',time_total
+        WRITE(233,"(A2,A20,A2,F8.6)")'5.',' Viscosity_0 ','= ',viscosity0
         WRITE(233,"(A2,A20,A2,F8.6)")'5.',' Viscosity  ','= ',viscosity
-        WRITE(233,"(A2,A20,A2,I5)")'6.',' No of saves   ','= ',save_total
-        WRITE(233,"(A2,A20,A2,F6.3)")'7.',' Initial energy ','= ',initial_en
-        WRITE(233,"(A2,A20,A2,F12.4)")'8.',' Smallest wavenumber','= ',mom(1)
-        WRITE(233,"(A2,A20,A2,F12.4)")'9.',' Largest wavenumber ','= ',mom(N)
-        WRITE(233,"(A2,A20,A2,I8)")'10.',' Total Triad count ','= ',no_of_triads
-        WRITE(233,"(A2,A20,A2,F5.2)")'11.',' Localness of triad, cutoff ','= ',localness_cutoff_ratio
-        
+        WRITE(233,"(A2,A20,A2,F6.3)")'6.',' Fractional index  ','= ',frac_index
+        WRITE(233,"(A2,A20,A2,I5)")'7.',' No of saves   ','= ',save_total
+        WRITE(233,"(A2,A20,A2,F6.3)")'8.',' Initial energy ','= ',initial_en
+        WRITE(233,"(A2,A20,A2,F12.4)")'9.',' Smallest wavenumber','= ',mom(1)
+        WRITE(233,"(A2,A20,A2,F12.4)")'10.',' Largest wavenumber ','= ',mom(N)
+        WRITE(233,"(A2,A20,A2,F12.4)")'11.',' Kolmogorov wavenumber ','= ',mom_kol
+        WRITE(233,"(A2,A20,A2,I8)")'12.',' Total Triad count ','= ',no_of_triads
+        WRITE(233,"(A2,A20,A2,F5.2)")'13.',' Localness of triad, cutoff ','= ',localness_cutoff_ratio
         CLOSE(233)
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
           
@@ -238,7 +239,7 @@ MODULE main_run
             !  ENERGY FILE
 
             file_address  =   TRIM(ADJUSTL(file_location))  //  'dissipation_t_'   //  TRIM(ADJUSTL(file_time))//'.dat'
-            CALL write_spectrum(file_address,mom,two * viscosity * laplacian_k * spec)
+            CALL write_spectrum(file_address,mom,two * viscosity * frac_laplacian_k * spec)
             !  DISSIPATION FILE
 
             CALL transfer_term
@@ -282,15 +283,15 @@ MODULE main_run
         en_time(t_step)  =   energy
 
         enstrophy        =   SUM( laplacian_k * spec * mom_band )
-        es_time(t_step)  =   enstrophy  
+        es_time(t_step)  =   enstrophy
+        
+        dissipation_rate =   two * viscosity * SUM( frac_laplacian_k * spec * mom_band )
+        ds_time(t_step)  =   dissipation_rate 
 
-        dissipation_rate =   two * viscosity * enstrophy
-        ds_time(t_step)  =   dissipation_rate
-
-        skewness         =   SUM( ( transfer_spec + forcer ) * laplacian_k * mom_band )
+       skewness         =   SUM( ( transfer_spec + forcer ) * laplacian_k * mom_band )
         skewness         =   skewness * ( enstrophy ** ( -1.5D0 )) * DSQRT(135.0D0/98.0D0)
         sk_time(t_step)  =   skewness
-        
+         
         !  ENERGY,ENSTROPHY, DISSIPAtioN AND SKEWNESS VS TIME 
 
         !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -352,7 +353,7 @@ MODULE main_run
         file_address  =  TRIM(ADJUSTL(file_location))   //     'viscous_loss_vs_time.dat'
         CALL write_temporal(file_address,t_axis,ds_time)
         ! DISSIPATION VS TIME FILE
-
+        
         file_address  =  TRIM(ADJUSTL(file_location))   //     'skewness_vs_time.dat'
         CALL write_temporal(file_address,t_axis,sk_time)
         ! SKEWNESS VS TIME FILE
@@ -379,6 +380,7 @@ MODULE main_run
         ! From 'system_parameters'
         DEALLOCATE(p_ind_max,p_ind_min)
         DEALLOCATE(kqp_status)
+        DEALLOCATE(frac_laplacian_k)
         DEALLOCATE(geom_fac)
 
         ! From 'main_run'
@@ -390,7 +392,7 @@ MODULE main_run
         DEALLOCATE(flux ,flux_pos, flux_neg)
         DEALLOCATE(flux_pos_local, flux_neg_local)
         DEALLOCATE(flux_pos_nonlocal, flux_neg_nonlocal)
-
+        
      END
-     
+
 END MODULE main_run

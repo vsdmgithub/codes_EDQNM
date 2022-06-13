@@ -13,7 +13,7 @@
 ! -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 ! #########################
 ! MODULE: solver
-! LAST MODIFIED: 16 November 2020
+! LAST MODIFIED: 05 January 2021
 ! #########################
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 ! SOLVER FOR  EDQNM EQUATION
@@ -38,6 +38,7 @@ MODULE solver
     ! _________________________
     ! SOLVER VARIABLES
     ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    INTEGER(KIND=4)::cnt_k,cnt_p,cnt_q
     DOUBLE PRECISION::viscous_freq,eddy_freq 
     DOUBLE PRECISION::eddy_k,eddy_q,eddy_p
     DOUBLE PRECISION::integrand
@@ -66,7 +67,7 @@ MODULE solver
 
         IMPLICIT NONE
         ! First store the spectral velocity into a temporary matrix, as steps of RK4 algorithm will manipulate 'spec(k)''
-
+        
         spec_temp   =   spec
         CALL time_derivative(d_spec1) ! This call provides the time derivative for the spectral 
 
@@ -103,10 +104,11 @@ MODULE solver
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         !   E   D   Q   N   M          E   Q   N.
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
         d_spec  =   transfer_spec 
         ! The transfer term 
         
-        d_spec  =   d_spec - two * viscosity * laplacian_k * spec
+        d_spec  =   d_spec - two * viscosity * frac_laplacian_k * spec
         ! The dissipative term
 
         d_spec  =   d_spec + forcer
@@ -114,7 +116,6 @@ MODULE solver
 
         d_spec  =   dt * d_spec
         ! Increment in spectrum
-        
 
 	END
 
@@ -156,7 +157,7 @@ MODULE solver
 
         END DO
         END DO
-
+    
     END
     
     SUBROUTINE transfer_term_integrand
@@ -210,8 +211,8 @@ MODULE solver
         !   D   A   M   P   I   N   G       F  A  C  T  O  R 
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         
-        viscous_freq  =  viscosity * ( laplacian_k( k_ind ) + &
-                        laplacian_k( q_ind ) + laplacian_k( p_ind ) )
+        viscous_freq  =  viscosity * ( frac_laplacian_k( k_ind ) + &
+                        frac_laplacian_k( q_ind ) + frac_laplacian_k( p_ind ) )
 
         damping        =  one - DEXP( -( eddy_freq + viscous_freq ) * time_now )
 
@@ -361,5 +362,5 @@ MODULE solver
         ! Getting the local flux by subracting
                 
     END
-     
+ 
 END MODULE solver

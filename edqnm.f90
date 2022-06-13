@@ -13,7 +13,7 @@
 ! -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 ! #########################
 ! PROGRAM : EDQNM
-! LAST MODIFIED: 16 November 2020
+! LAST MODIFIED: 05 January 2021
 ! _____________________________________
 ! LIST OF MODULES USED :
 !       1. main_run
@@ -77,15 +77,18 @@ PROGRAM EDQNM
     
     DO visc_ind =   1,  no_of_visc
     
-    viscosity   =   viscosity_array( visc_ind ) * ( 10.0D0 ** ( - 5.0D0 ) )
+    viscosity0  =   viscosity_array( visc_ind ) * ( 10.0D0 ** ( - 5.0D0 ) )
     ! Correcting the order of viscosity
 
     dt          =   dt_array( visc_ind ) * ( 10.0D0 ** ( - 5.0D0 ) )
 !    dt          =   dt_array( visc_ind ) * ( 10.0D0 ** ( - 3.0D0 ) )
     ! Correcting the order of time step
+
+    mom_kol     =   k_kol_array( visc_ind )
+    ! Kolmogorov scale for the simulation
     
     PRINT*,'========================================'
-    WRITE(*,'(I2,A15,ES10.3)'),visc_ind,'VISCOSITY = ',viscosity
+    WRITE(*,'(I2,A15,ES10.3)'),visc_ind,'VISCOSITY_0 = ',viscosity0
     PRINT*,'========================================'
 
     CALL init_global_variables
@@ -100,7 +103,7 @@ PROGRAM EDQNM
     ! Does time_step check, initial condition and writing details of simulation
     ! Allocating the evolution arrays, if everything is set, 'all_set' will be 1.
 
-    c='y'
+    c='n'
     ! Easy way to stop the evolution with only initiation
     
     IF (c .EQ. 'n') THEN

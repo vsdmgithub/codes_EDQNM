@@ -13,7 +13,7 @@
 ! -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 ! #########################
 ! MODULE: system_parameters
-! LAST MODIFIED: 16 November 2020
+! LAST MODIFIED: 05 January 2021
 ! #########################
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 ! SYSTEM PARAMETERS FOR EDQNM EQUATION
@@ -42,7 +42,10 @@ MODULE system_parameters
     INTEGER(KIND=4)::no_of_triads
     ! _________________________
     DOUBLE PRECISION::viscosity
+    DOUBLE PRECISION::viscosity0
     DOUBLE PRECISION::forcing
+    DOUBLE PRECISION::mom_kol
+    DOUBLE PRECISION::frac_index
     DOUBLE PRECISION::initial_en
     DOUBLE PRECISION::energy,enstrophy
     DOUBLE PRECISION::dissipation_rate,skewness
@@ -55,6 +58,7 @@ MODULE system_parameters
     ! _________________________
     DOUBLE PRECISION,DIMENSION(3)::triad_sides
     DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::spec 
+    DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::frac_laplacian_k
     DOUBLE PRECISION,DIMENSION(:,:,:),ALLOCATABLE::geom_fac
     DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::forcer,forcer_template 
     DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_time,es_time
@@ -83,23 +87,36 @@ MODULE system_parameters
         ! 1. This is forced viscous EDQNM, with forcing given in the first
         !    few shells matching the dissipation rate with slight fluctuations
         !    to keep it random. The time averaged net energy remains constant.
-        ! 2. Viscosity levels for resolutions
+        ! 2. Viscosity0 levels for resolutions
         !     N45 - Minimum of 0.0005.
         ! 3. Eddy constant is generally not changed.
         ! 4. Two timescales are derived, one from net energy, other from viscosity
+        ! 5. This is a fractional viscous model, s varies from (0,1). 
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-        name_sys    =   's_1_v_'
+        name_sys    =   's_zp7_v_'
+
+        frac_index  =   0.6
+        ! Fractional laplacian index, 1 means original laplacian.
+
+        viscosity   =   ( mom_kol ** ( two - two * frac_index ) )
+        viscosity   =   viscosity * viscosity0
+        ! Modified viscosity, such that at k_kol, the dissipative coefficient is 
+        ! same as that of s=1 case.
+
+!       viscosity   =   viscosity0
+        ! COMMENT this line to keep Modified viscosity
 
         initial_en  =   one
-
+        ! Initial energy
+        
         ind_integral     =   FLOOR( DBLE( N ) / 10.0D0 )
         ! Index (position) of integral scale
       
-        time_spec        =   one / DSQRT( initial_en * ( mom( N ) ** two ) )
+        time_spec        =   one / DSQRT( initial_en * mom( N ) * mom( N ) )
         ! Time scale from energy and largest momentum
 
-        time_visc        =   one / ( viscosity * ( mom( N ) ** two ) )
+        time_visc        =   one / ( viscosity * ( mom( N ) ** ( two * frac_index ) ) )
         ! Time scale from viscosity and largest momentum
 
         eddy_constant    =   0.54D0
@@ -112,7 +129,7 @@ MODULE system_parameters
         CALL time_to_step_convert(time_visc,t_step_forcing)
 
         CALL fix_time_step( 0.5D0 * MIN( time_spec, time_visc), dt_ref )
-        
+                
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
           
 	END
@@ -136,7 +153,8 @@ MODULE system_parameters
         !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
         ALLOCATE( p_ind_min( N, N ), p_ind_max( N, N ) ) 
         ALLOCATE( kqp_status( N, N, N ), geom_fac( N, N, N ) )
-
+        ALLOCATE( frac_laplacian_k( N ) )
+        
         kqp_status          =  0
         geom_fac            =  zero
         ! Reseting to zero for safety
@@ -177,7 +195,9 @@ MODULE system_parameters
         !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         !  T R I A N G L E     C H E C K   &   C O S I N E S   O F    I T.
         ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
+        no_of_triads =  0
+        ! Reset for no of triads in the system.
+        
         DO k_ind = 1 , N
         DO q_ind = 1 , N
 
@@ -233,6 +253,15 @@ MODULE system_parameters
         END DO
         END DO
         
+        !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        !  F  R  A  C  T  I  O  N  A  L     L  A  P  L  A  C  I  A  N
+        ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+        DO k_ind = 1, N
+
+            frac_laplacian_k( k_ind )   =   mom( k_ind ) ** ( two * frac_index )
+            ! FRACTIONAL LAPLACIAN - TO BE USED IN WHEREVER VISCOUS TERMS APPEAR
+            
+        END DO
     END
     
     SUBROUTINE find_cosine( i1, i2, i3 , cosine)
@@ -303,5 +332,5 @@ MODULE system_parameters
     RETURN
     
     END
-    
+
 END MODULE system_parameters
