@@ -1,64 +1,75 @@
-# MAKEFILE FOR EDQNM 
-
-# DEFINE VARIABLES
-# ---------------------------start-----
+# MAKEFILE FOR EULER
 
 # COMPILER
 cc=gfortran
 
-# COMPILER LOCATION 
-cc_lc= -I/usr/local/include
-
 # LIBRARY LOCATION
-lb_fftw=-L/usr/local/include -lfftw3 -lm
+#lb_lc= -I/home/sugan/fftw/include
+#lb_lc= -I/home/coco/fftw/include
+#lb_lc= -I/home/sugan.murugan/opt/fftw/3.3.8/include
+
+# LIBRARY FILE
+#lb_fftw=-L/home/sugan/fftw/lib -lfftw3 -lm
+#lb_fftw=-L/home/coco/fftw/lib -lfftw3 -lm
+#lb_fftw=-L/home/sugan.murugan/opt/fftw/3.3.8/lib -lfftw3 -lm
 
 # PROGRAM
-prog=edqnm.f90
+program=edqnm_code.f90
 
 # MODULES
-mod=timer_mod.f90\
-	constants.f90\
-	global_variables.f90\
-	system_parameters.f90\
-	initial_condition.f90\
-	solver.f90\
-	output.f90\
-	main_run.f90
+timer_mod            =modules-secondary/system_timer.f90
+constants_mod        =modules-secondary/system_constants.f90
+auxilaries_mod       =modules-secondary/system_auxilaries.f90
+basicvariables_mod   =modules-primary/system_basicvariables.f90
+basicoutput_mod      =modules-primary/system_basicoutput.f90
+initialcondition_mod =modules-primary/system_initialcondition.f90
+basicfunctions_mod   =modules-primary/system_basicfunctions.f90
+advfunctions_mod     =modules-primary/system_advfunctions.f90
+solver_mod           =modules-secondary/system_solver.f90
+main_mod             =modules-primary/system_main.f90
 
 # OBJECTS
-obj=timer_mod.o\
-	constants.o\
-	global_variables.o\
-	system_parameters.o\
-	initial_condition.o\
-	solver.o\
-	output.o\
-	main_run.o\
+obj=system_timer.o\
+	system_constants.o\
+	system_auxilaries.o\
+	system_basicvariables.o\
+	system_basicoutput.o\
+	system_initialcondition.o\
+	system_basicfunctions.o\
+	system_advfunctions.o\
+	system_solver.o\
+	system_main.o
 
 # EXECUTABLE
 run=./ex
 
 # CLEAN COMMANDS
-mkclean=make clean
+rmex=rm ex
+
 mkcl=make cl
 #----------------------------end-------
 
-
-
 # MAKEFILE
-# ---------------------------start----- 
+# ---------------------------start-----
 ex:$(ob)
-#$(mkclean)
-	$(cc) $(cc_lc) -c $(mod) 
-	$(cc) $(cc_lc) -c $(prog) 
-	$(cc) $(cc_lc) $(prog) $(obj) -o ex 
+	$(cc) -c $(timer_mod)
+	$(cc) -c $(constants_mod)
+	$(cc) -c $(auxilaries_mod)
+	$(cc) -c $(basicvariables_mod)
+	$(cc) -c $(basicoutput_mod)
+	$(cc) -c $(initialcondition_mod)
+	$(cc) -c $(basicfunctions_mod)
+	$(cc) -c $(advfunctions_mod)
+	$(cc) -c $(solver_mod)
+	$(cc) -c $(main_mod)
+	$(cc) $(program) $(obj) -o ex
 	$(mkcl)
 	$(run)
 
 #----------------------------end-------
 
 # CLEANING
-# ---------------------------start----- 
+# ---------------------------start-----
 clean:
 	rm ex
 	clear
