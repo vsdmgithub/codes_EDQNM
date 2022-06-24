@@ -198,7 +198,7 @@ MODULE system_basicvariables
     ind_dissipation        = N - FLOOR( DBLE( N ) / 4 )
     ! Index (position) of dissipation scale
 
-    viscosity              = 0.002D0
+    viscosity              = zero
     ! Viscosity
 
     min_wno                = wno_base * lambda
@@ -230,7 +230,7 @@ MODULE system_basicvariables
     CFL                    = time_min / dt
     ! Actual CFL of the system
 
-    CALL time_to_step_convert(time_total,t_step_total,dt)
+    CALL time_to_step_convert( time_total, t_step_total, dt)
     ! REF-> <<< system_auxilaries >>>
     ! Converts time to steps
 
@@ -260,7 +260,7 @@ MODULE system_basicvariables
     ! Ratio of min to max triad sides, to say it is a nonlocal triad interactions
     ! This is userdefined . Has to be << 1 is must.
 
-    forcing_status         = 1
+    forcing_status         = 0
     ! '1' to activate forcing, '0' to deactivate forcing
 
     state_sim              = 0

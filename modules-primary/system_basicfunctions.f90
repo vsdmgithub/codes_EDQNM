@@ -78,7 +78,7 @@ MODULE system_basicfunctions
       ! creates forcing arrays
 
     END IF
-    
+
   END
 ! </f>
 
@@ -318,7 +318,12 @@ MODULE system_basicfunctions
       ds_time(t_step)  = dissipation_rate
     END IF
 
-    skewness           = SUM( ( transfer_spec + forcer ) * laplacian_k * wno_band )
+    IF ( ( viscosity .GT. tol_float ) .AND. ( forcing_status .EQ. 1 ) ) THEN
+      skewness           = SUM( ( transfer_spec + forcer ) * laplacian_k * wno_band )
+    ELSE
+      skewness           = SUM( transfer_spec * laplacian_k * wno_band )
+    END IF
+    
     skewness           = skewness * ( enstrophy ** ( -1.5D0 )) * DSQRT(135.0D0/98.0D0)
     sk_time(t_step)    = skewness
 
@@ -467,10 +472,13 @@ MODULE system_basicfunctions
     !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     DEALLOCATE( p_ind_min, p_ind_max )
     DEALLOCATE( kqp_status, geom_fac )
-    DEALLOCATE( forcer, forcer_template )
     DEALLOCATE( eddy_array )
     !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     DEALLOCATE( time, en_time, es_time, ds_time, sk_time )
+
+    IF ( ( viscosity .GT. tol_float ) .AND. ( forcing_status .EQ. 1 ) ) THEN
+      DEALLOCATE( forcer, forcer_template )
+    END IF
 
   END
 ! </f>

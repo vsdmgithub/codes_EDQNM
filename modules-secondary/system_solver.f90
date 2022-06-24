@@ -64,10 +64,14 @@ MODULE system_solver
     !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     ALLOCATE( d_spec1( N ), d_spec2( N ), d_spec3( N ), d_spec4( N ))
     ALLOCATE( spec_temp( N ) )
-    ALLOCATE( integrating_factor( N ) )
 
-    integrating_factor = DEXP( - viscosity * laplacian_k * dt )
-		! INTEGRATION FACTOR TO INCLUDE VISCOSITY EFFECTS
+    IF ( viscosity .GT. tol_float ) THEN
+
+	    ALLOCATE( integrating_factor( N ) )
+	    integrating_factor = DEXP( - viscosity * laplacian_k * dt )
+			! INTEGRATION FACTOR TO INCLUDE VISCOSITY EFFECTS
+
+		END IF
 
   END
 ! </f>
@@ -97,10 +101,11 @@ MODULE system_solver
     CALL time_derivative(d_spec4)
 
     ! Final increment for 'v(k)'
-		spec      = ( spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six ) * integrating_factor
-
-		! spec      =   spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six
-		! COMMENT THIS TO USE INTEGRATING FACTOR FOR DISSIPATIVE TERM
+    IF ( viscosity .GT. tol_float ) THEN
+			spec      = ( spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six ) * integrating_factor
+		ELSE
+			spec      =   spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six
+		END IF
 
   END
 ! </f>
@@ -126,11 +131,17 @@ MODULE system_solver
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     !   E   D   Q   N   M          E   Q   N.
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    d_spec  =   dt * ( transfer_spec + forcer )
-    ! The transfer term and the forcing term
+    IF ( ( viscosity .GT. tol_float ) .AND. ( forcing_status .EQ. 1 ) ) THEN
 
-    ! d_spec  =   d_spec - two * viscosity * laplacian_k * spec
-		! UNCOMMENT THIS TO USE INTEGRATING FACTOR FOR DISSIPATIVE TERM
+	    d_spec  =   dt * ( transfer_spec + forcer )
+	    ! The transfer term and the forcing term
+
+		ELSE
+
+	    d_spec  =   dt * transfer_spec
+	    ! The transfer term
+
+		END IF
 
 	END
 ! </f>
@@ -151,7 +162,10 @@ MODULE system_solver
     !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     DEALLOCATE(d_spec1, d_spec2, d_spec3, d_spec4)
     DEALLOCATE(spec_temp)
-    DEALLOCATE(integrating_factor)
+
+    IF ( viscosity .GT. tol_float ) THEN
+	    DEALLOCATE(integrating_factor)
+		END IF
 
   END
 ! </f>

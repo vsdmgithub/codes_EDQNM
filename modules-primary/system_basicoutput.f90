@@ -97,8 +97,8 @@ MODULE system_basicoutput
     ! sub_dir_t   =   't_data/'
     ! Sub directory name to store temporal data
 
-    type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
-    ! type_sim    =   'INVISCID_N' // TRIM( ADJUSTL( N_char ) ) // '/'
+    ! type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
+    type_sim    =   'INVISCID_N' // TRIM( ADJUSTL( N_char ) ) // '/'
     ! type of simulation, the data is storing
 
     CALL get_simulation_name(name_sim)
@@ -292,13 +292,13 @@ MODULE system_basicoutput
     IF ( t_step .EQ. 0 ) THEN
 
       WRITE(*,'(A63)')'-----------------------------------------------------------'
-      WRITE(*,'(A63)')'|   TIME     |     ENERGY    |   ENSTROPHY   |  DISS  RATE  |'
+      WRITE(*,'(A63)')'|   TIME     |     ENERGY    |       ENSTROPHY   |  DISS  RATE  |'
       WRITE(*,'(A63)')'-----------------------------------------------------------'
 
     END IF
 
       !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      WRITE(*,'(A4,F8.4,A4,F12.8,A4,F12.8,A4,F12.8,A4)')'|   ',time_now,' |  '&
+      WRITE(*,'(A4,F8.4,A4,F12.8,A4,F16.6,A4,F12.8,A4)')'|   ',time_now,' |  '&
       ,energy,' |  ',enstrophy,' |  ',dissipation_rate,' | '
       !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -77,9 +77,6 @@ MODULE system_main
     ! CALL read_initial_condition
     ! REF-> <<< system_initialcondition >>>
 
-    CALL prepare_output
-    ! REF-> <<< system_basicoutput >>>
-
     CALL allocate_edqnm_arrays
     ! REF-> <<< system_basicfunctions >>>
 
@@ -89,8 +86,11 @@ MODULE system_main
     CALL allocate_solver_arrays
     ! REF-> <<< system_solver >>>
 
-    CALL allocate_flux_decomposition_arrays
+    ! CALL allocate_flux_decomposition_arrays
     ! REF-> <<< system_advfunctions >>>
+
+    CALL prepare_output
+    ! REF-> <<< system_basicoutput >>>
 
   ELSE
 
@@ -172,7 +172,7 @@ MODULE system_main
       CALL compute_spectral_data
       ! REF-> <<< system_basicfunctions >>>
 
-      CALL flux_decomposition
+      ! CALL flux_decomposition
       ! REF-> <<< system_advfunctions >>>
 
     END IF
@@ -226,7 +226,7 @@ MODULE system_main
     CALL deallocate_solver_arrays
     ! REF-> <<< system_solver >>>
 
-    CALL deallocate_flux_decomposition_arrays
+    ! CALL deallocate_flux_decomposition_arrays
     ! REF-> <<< system_advfunctions >>>
 
     CALL deallocate_system_arrays
