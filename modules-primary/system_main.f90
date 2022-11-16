@@ -12,8 +12,8 @@
 ! --------------------------------------------------------------
 
 ! ##################
-! MODULE: system_main
-! LAST MODIFIED: 21 JUNE 2022
+! MODULE NAME: system_main
+! LAST MODIFIED: 15 NOV 2022
 ! ##################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -25,214 +25,214 @@ MODULE system_main
 ! <f
 ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ! ------------
-! This is the main module. All the other modules are sub-modules to this.
-! Then nesting of all sub-modules is as follows
+! * This is the main module, containing the flow of simulation.
+! * Simply divided into three parts
+! * -> Pre-analysis
+! * -> Evolution
+! * -> Inter-analysis
+! * -> Post-analysis
 ! MAIN MODULE
 ! -------------
 ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
   ! [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
   !  SUB-MODULES
   !  ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
-  USE system_solver
   USE system_advfunctions
 
   ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
-	IMPLICIT  NONE
-  ! _________________________
-  !  VARIABLES
-  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! ---------------------------------------------------------
-  ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+  IMPLICIT  NONE
 
   CONTAINS
 ! </f>
 
   SUBROUTINE pre_analysis
 ! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! Call this to check the time_step, initial condition and output folder creation.
-  ! Does time_step check, initial condition and writing details of simulation
-  ! Allocating the evolution arrays, if everything is set, 'all_set' will be 1.
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! Call this to check the time_step, initial condition and output folder creation.
+	! Does time_step check, initial condition and writing details of simulation
+	! Allocating the evolution arrays, if everything is set, 'sys_status' will be 1.
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  IMPLICIT NONE
+	IMPLICIT NONE
 
-  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  !       T    I    M     E              S    T    E    P              C   H    E   C   K
-  !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  IF ( dt  .LT. MIN( time_visc, time_rms ) ) THEN
+	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	!       T    I    M     E              S    T    E    P              C   H    E   C   K
+	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	IF ( dt .LT. MIN( time_visc, time_rms ) ) THEN
 
-    all_set =  1
+		sys_status = 1
 
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !  I  N  I  T  I  A  L        C  O  N  D  I  T  I  O  N
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		CALL allocate_edqnm_arrays
+		! REF-> <<< system_basicfunctions >>>
 
-    CALL make_initial_condition
-    ! REF-> <<< system_initialcondition >>>
+		CALL init_edqnm_arrays
+		! REF-> <<< system_basicfunctions >>>
 
-    ! CALL read_initial_condition
-    ! REF-> <<< system_initialcondition >>>
+		CALL triad_debug
+		! REF-> <<< system_basicfunctions >>>
 
-    CALL allocate_edqnm_arrays
-    ! REF-> <<< system_basicfunctions >>>
+		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-    CALL init_edqnm_arrays
-    ! REF-> <<< system_basicfunctions >>>
+			CALL IC_large_eddies
+			! CALL IC_read_from_file
+			! REF-> <<< system_initialcondition >>>
 
-    CALL allocate_solver_arrays
-    ! REF-> <<< system_solver >>>
+			CALL allocate_solver_arrays
+			! REF-> <<< system_solver >>>
 
-    ! CALL allocate_flux_decomposition_arrays
-    ! REF-> <<< system_advfunctions >>>
+			! CALL allocate_flux_decomposition_arrays
+			! REF-> <<< system_advfunctions >>>
 
-    CALL prepare_output
-    ! REF-> <<< system_basicoutput >>>
+			CALL prepare_output
+			! REF-> <<< system_basicoutput >>>
 
-  ELSE
+		END IF
 
-    CALL print_error_timestep
-    ! REF-> <<< system_basicoutput >>>
+	ELSE
 
-  END IF
+		CALL print_error_timestep
+		! REF-> <<< system_basicoutput >>>
 
-  END
+	END IF
+
+	END
 ! </f>
 
-  SUBROUTINE time_evolution
-! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! Loop of time steps, where at each step the spectral velocities
-  ! are updated through any of the algoritm. Meanwhile, inter_analysis and
-  ! outputs are printed respectively.
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	SUBROUTINE time_evolution
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! Loop of time steps, where at each step the spectral velocities
+	! are updated through any of the algoritm. Meanwhile, inter_analysis and
+	! outputs are printed respectively.
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT NONE
+		IMPLICIT NONE
 
-    ! ================================================================
-    !             S        T         A         R        T
-    ! 8888888888888888888888888888888888888888888888888888888888888888
-    DO t_step = 0, t_step_total
+		! ================================================================
+		!             S        T         A         R        T
+		! 8888888888888888888888888888888888888888888888888888888888888888
+		CALL write_sim_start
+		! REF-> <<< system_basicoutput >>>
 
-      CALL inter_analysis
+		DO t_step = 0, t_step_total
 
-      !  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      !  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
-      !  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      CALL rk4_algorithm
-      ! Updates velocity field as per EDQNM equation for next time step
+			CALL inter_analysis
 
-      IF ( NaN_count .GT. 0) THEN
+			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
+			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			CALL rk4_algorithm
+			! Updates velocity field as per EDQNM equation for next time step
 
-        CALL print_error_nan
-      ! REF-> <<< system_basicoutput >>>
+			IF ( nan_count .GT. 0) THEN
 
-        EXIT ! Meaning 'NaN' is encountered during the Debug
+				CALL print_error_nan
+				! REF-> <<< system_basicoutput >>>
+				EXIT ! Meaning 'NaN' is encountered during the Debug
 
-      END IF
+			END IF
 
-    END DO
-    ! ================================================================
-    !                    E     N     D
-    ! 8888888888888888888888888888888888888888888888888888888888888888
+		END DO
+		! ================================================================
+		!                    E     N     D
+		! 8888888888888888888888888888888888888888888888888888888888888888
+		CALL write_sim_end
+		! REF-> <<< system_basicoutput >>>
 
-    state_sim = 1
-    ! Stating that the simulation has ended.
+		sim_status = 1
+		! Stating that the simulation has ended.
 
-  END
+	END
 ! </f>
 
   SUBROUTINE inter_analysis
 ! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! This does all the inter_analysis, making calls to write output during the evolution, debug and statistics part.
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! This does all the inter_analysis, making calls to write output during the evolution, debug and statistics part.
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT NONE
+		IMPLICIT NONE
 
-    CALL step_to_time_convert(t_step, time_now, dt)
-    ! Converts the 't_step' to actual time 'time_now'
+		CALL step_to_time_convert(t_step, time_now, dt)
+		! Converts the 't_step' to actual time 'time_now'
 
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !  S  A  V  I  N  G    D  A  T  A
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  S  A  V  I  N  G    D  A  T  A
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-    IF (MOD(t_step,t_step_save) .EQ. 0) THEN
+		IF (MOD(t_step,t_step_save) .EQ. 0) THEN
 
-      WRITE (file_time,f_d8p4) time_now
-      ! Writes 'time_now' as a CHARACTER
+			WRITE (file_time,f_d8p4) time_now
+			! Writes 'time_now' as a CHARACTER
 
-      CALL compute_spectral_data
-      ! REF-> <<< system_basicfunctions >>>
+			CALL compute_transfer_term
+			! REF-> <<< system_solver >>>
 
-      ! CALL flux_decomposition
-      ! REF-> <<< system_advfunctions >>>
+			CALL compute_spectral_data
+			! REF-> <<< system_basicfunctions >>>
 
-    END IF
+			! CALL flux_decomposition
+			! REF-> <<< system_advfunctions >>>
 
-    CALL compute_temporal_data
-    ! REF-> <<< system_basicfunctions >>>
+		END IF
 
-    IF ( ( viscosity .GT. tol_float ) .AND. ( forcing_status .EQ. 1 ) ) THEN
+		IF ( (MOD(t_step,t_step_forcing) .EQ. 0 ) .AND. ( forc_status .EQ. 1 ) ) THEN
 
-      !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      !  F  O  R  C  I  N  G
-      !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      net_dissipation_rate = dissipation_rate - ( energy - init_energy )/dt
-      forcer               = net_dissipation_rate * forcer_template
-      ! FORCING
+			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			!  F  O  R  C  I  N  G
+			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			ds_rate_ref = ds_rate - fback_coef * ( energy - energy0 )
+			! UNCOMMENT this to use a fixed forcing via fixed ds_rate_ref
+			fr_spec     = ds_rate_ref * spec0
+			! FORCING SPECTRUM
 
-    END IF
+		END IF
 
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !  D  E  B  U  G         F  O  R          N  a   N
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    IF (MOD(t_step,t_step_debug) .EQ. 0) then
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  D  E  B  U  G         F  O  R          N  a   N
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		IF (MOD(t_step,t_step_debug) .EQ. 0) then
 
-      CALL perform_debug
-      ! REF-> <<< system_basicfunctions >>>
+			CALL perform_debug
+			! REF-> <<< system_basicfunctions >>>
 
-      CALL print_running_status
-      ! REF-> <<< system_basicoutput >>>
+			CALL print_running_status
+			! REF-> <<< system_basicoutput >>>
 
-    END IF
+		END IF
 
-  END
+	END
 ! </f>
 
-  SUBROUTINE post_analysis
+	SUBROUTINE post_analysis
 ! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! This does all the post analysis, making calls to write output after the evolution, debug and statistics part.
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! This does all the post analysis, making calls to write output after the evolution, debug and statistics part.
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT NONE
+		IMPLICIT NONE
 
-    CALL write_temporal_data
-    ! REF-> <<< system_basicoutput >>>
+		CALL deallocate_edqnm_arrays
+		! REF-> <<< system_basicfunctions >>>
 
-    CALL deallocate_edqnm_arrays
-    ! REF-> <<< system_basicfunctions >>>
+		CALL deallocate_solver_arrays
+		! REF-> <<< system_solver >>>
 
-    CALL deallocate_solver_arrays
-    ! REF-> <<< system_solver >>>
+		! CALL deallocate_flux_decomposition_arrays
+		! REF-> <<< system_advfunctions >>>
 
-    ! CALL deallocate_flux_decomposition_arrays
-    ! REF-> <<< system_advfunctions >>>
+		CALL deallocate_system_arrays
+		! REF-> <<< system_basicvariables >>>
 
-    CALL deallocate_system_arrays
-    ! REF-> <<< system_basicvariables >>>
-
-  END
+	END
 ! </f>
 
 END MODULE system_main

@@ -11,8 +11,8 @@
 ! ---------   ----------  ----------  /            \  |      \|
 ! --------------------------------------------------------------
 ! #########################
-! MODULE: system_solver
-! LAST MODIFIED: 21 June 2022
+! MODULE NAME: system_solver
+! LAST MODIFIED: 15 NOV 2022
 ! #########################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -25,149 +25,240 @@ MODULE system_solver
 ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ! ------------
 ! Takes the spectral velocity and updates it by a step, using the subroutines
-! 1. rk4_algorithm
-! 2. time_derivative
+! *. rk4_algorithm
+! *. time_derivative
 ! -------------
 ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-  ! [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
-  !  SUB-MODULES
-  !  ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+	! [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[
+	!  SUB-MODULES
+	!  ]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
 	USE system_basicfunctions
 
-  ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+	! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 
-  IMPLICIT NONE
-  ! _________________________
-  ! SOLVER ARRAYS
-  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::d_spec1, d_spec2, d_spec3, d_spec4
-  DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::spec_temp,integrating_factor
-  ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+	IMPLICIT NONE
+	! _________________________
+	! SOLVER ARRAYS
+	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::d_spec1, d_spec2, d_spec3, d_spec4
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::spec_temp,integ_factor
+	! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 
-  CONTAINS
-! </f>
+	CONTAINS
+	! </f>
 
 	SUBROUTINE allocate_solver_arrays
-! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! CALL THIS SUBROUTINE TO:
-  !       allocate all solver arrays
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	!       allocate all solver arrays
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT  NONE
+		IMPLICIT  NONE
 
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !  A  R  R  A  Y     A  L  L  O  C  A  T  I  O  N
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    ALLOCATE( d_spec1( N ), d_spec2( N ), d_spec3( N ), d_spec4( N ))
-    ALLOCATE( spec_temp( N ) )
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  A  R  R  A  Y     A  L  L  O  C  A  T  I  O  N
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		ALLOCATE( d_spec1( N ), d_spec2( N ), d_spec3( N ), d_spec4( N ))
+		ALLOCATE( spec_temp( N ) )
 
-    IF ( viscosity .GT. tol_float ) THEN
+		IF ( visc_status .EQ. 1 ) THEN
 
-	    ALLOCATE( integrating_factor( N ) )
-	    integrating_factor = DEXP( - viscosity * laplacian_k * dt )
+			ALLOCATE( integ_factor( N ) )
+			integ_factor = DEXP( - two * visc * laplacian_k * dt )
 			! INTEGRATION FACTOR TO INCLUDE VISCOSITY EFFECTS
 
 		END IF
 
-  END
-! </f>
+	END
+	! </f>
 
 	SUBROUTINE rk4_algorithm
-! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! CALL this to USE RK4 algorithm to move one step forward in time for the matrix 'spec(k,t)-> spec(k,t+1)'
-  ! Alg: - Runga kutta 4th order
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to USE RK4 algorithm to move one step forward in time for the matrix 'en_spec(k,t)-> en_spec(k,t+1)'
+	! Alg: - Runga kutta 4th order
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT NONE
-    ! First store the spectral velocity into a temporary matrix, as steps of RK4 algorithm will manipulate 'spec(k)''
+		IMPLICIT NONE
+		! First store the spectral velocity into a temporary matrix, as steps of RK4 algorithm will manipulate 'en_spec(k)''
 
-    spec_temp = spec
-    CALL time_derivative(d_spec1) ! This call provides the time derivative for the spectral
+		spec_temp = en_spec
+		CALL time_derivative(d_spec1) ! This call provides the time derivative for the spectral
 
-  	spec      = spec_temp + hf * d_spec1
-    CALL time_derivative(d_spec2)
+		en_spec      = spec_temp + hf * d_spec1
+		CALL time_derivative(d_spec2)
 
-    spec      = spec_temp + hf * d_spec2
-    CALL time_derivative(d_spec3)
+		en_spec      = spec_temp + hf * d_spec2
+		CALL time_derivative(d_spec3)
 
-		spec      = spec_temp + d_spec3
-    CALL time_derivative(d_spec4)
+		en_spec      = spec_temp + d_spec3
+		CALL time_derivative(d_spec4)
 
     ! Final increment for 'v(k)'
-    IF ( viscosity .GT. tol_float ) THEN
-			spec      = ( spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six ) * integrating_factor
+    IF ( visc_status .EQ. 1 ) THEN
+			en_spec      = ( spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six ) * integ_factor
 		ELSE
-			spec      =   spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six
+			en_spec      =   spec_temp + ( d_spec1 + two * d_spec2 + two * d_spec3 + d_spec4 ) / six
 		END IF
 
-  END
+	END
+	! </f>
+
+	SUBROUTINE time_derivative(d_spec)
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the time derivative matrix for matrix 'en_spec(k_ind)'
+	! This is the EDQNM EQUATION implemented for numerical computation
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		! _________________________
+		! TRANSFER  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		DOUBLE PRECISION ,DIMENSION( N ),INTENT(OUT)::d_spec
+
+		CALL compute_transfer_term
+		! REF-> <<< system_basicfunctions >>>
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!   E   D   Q   N   M          E   Q   N.
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		IF ( forc_status .EQ. 1 ) THEN
+
+			d_spec = dt * ( tr_spec + fr_spec )
+			! The transfer term and the forcing term
+
+		ELSE
+
+			d_spec = dt * tr_spec
+			! The transfer term
+
+		END IF
+
+	END
+	! </f>
+
+	SUBROUTINE compute_transfer_term
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the transfer term for every k
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!   T   R   A   N   S   F   E   R       T   E   R   M
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+		tr_spec   =   zero
+		! Reseting the transfer term
+
+		DO k_ind = 1 , N
+		DO q_ind = 1 , N
+		DO p_ind = p_ind_min( k_ind, q_ind ), p_ind_max( k_ind, q_ind )
+
+			CALL transfer_term_integrand
+
+			tr_spec( k_ind ) = tr_spec( k_ind ) + integrand
+			! Summation terms over all possible q,p for a given k.
+
+	END DO
+	END DO
+	END DO
+
+	END
 ! </f>
 
-  SUBROUTINE time_derivative(d_spec)
+	SUBROUTINE transfer_term_integrand
 ! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! CALL this to get the time derivative matrix for matrix 'spec(k_ind)'
-  ! This is the EDQNM EQUATION implemented for numerical computation
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the integrand for a given k,q,p
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT NONE
-    ! _________________________
-    ! TRANSFER  VARIABLES
-    ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    DOUBLE PRECISION ,DIMENSION( N ),INTENT(OUT)::d_spec
+		IMPLICIT NONE
+		! _________________________
+		! LOCAL  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		DOUBLE PRECISION:: p_d,k_d,E_k,E_p,E_q
 
-    CALL transfer_term
-    ! REF-> <<< system_basicfunctions >>>
+		CALL eddy_damping_factor
+		! Eddy damping term for the triad
 
-    ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    !   E   D   Q   N   M          E   Q   N.
-    ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    IF ( ( viscosity .GT. tol_float ) .AND. ( forcing_status .EQ. 1 ) ) THEN
+		p_d = wno( p_ind )**( dim - one )
+		k_d = wno( k_ind )**( dim - one )
+		E_k = en_spec( k_ind )
+		E_p = en_spec( p_ind )
+		E_q = en_spec( q_ind )
 
-	    d_spec  =   dt * ( transfer_spec + forcer )
-	    ! The transfer term and the forcing term
+		integrand  =  ( k_d * E_p - p_d * E_k ) * E_q
+		integrand  =  integrand * geom_B( k_ind, q_ind, p_ind ) * eddy_damping
+		integrand  =  integrand * weightage(k_ind, q_ind, p_ind)
 
-		ELSE
+	END
+! </f>
 
-	    d_spec  =   dt * transfer_spec
-	    ! The transfer term
+	SUBROUTINE eddy_damping_factor
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the damping factor for the third wnoent
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-		END IF
+		IMPLICIT NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+		eddy_array   = laplacian_k * en_spec * wno_band
+		eddy_k       = SUM( eddy_array( : k_ind) ) ** hf
+		eddy_q       = SUM( eddy_array( : q_ind) ) ** hf
+		eddy_p       = SUM( eddy_array( : p_ind) ) ** hf
+		eddy_freq    = eddy_const * ( eddy_k + eddy_q + eddy_p )
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! D A M P I N G       F A C T O R
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		visc_freq    = laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind )
+		visc_freq    = visc * visc_freq
+		eddy_damping = one - DEXP( -( eddy_freq + visc_freq ) * time_now )
+		eddy_damping = eddy_damping / ( eddy_freq + visc_freq )
 
 	END
 ! </f>
 
 	SUBROUTINE deallocate_solver_arrays
-! <f
-  ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  ! ------------
-  ! CALL THIS SUBROUTINE TO:
-  !       deallocate all solver arrays
-  ! -------------
-  ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	!       deallocate all solver arrays
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    IMPLICIT  NONE
+		IMPLICIT  NONE
 
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    !  A  R  R  A  Y     D  E   A  L  L  O  C  A  T  I  O  N
-    !  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    DEALLOCATE(d_spec1, d_spec2, d_spec3, d_spec4)
-    DEALLOCATE(spec_temp)
-
-    IF ( viscosity .GT. tol_float ) THEN
-	    DEALLOCATE(integrating_factor)
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  A  R  R  A  Y     D  E   A  L  L  O  C  A  T  I  O  N
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		DEALLOCATE(d_spec1, d_spec2, d_spec3, d_spec4)
+		DEALLOCATE(spec_temp)
+		IF ( visc_status .EQ. 1 ) THEN
+			DEALLOCATE(integ_factor)
 		END IF
 
-  END
+	END
 ! </f>
 
 END MODULE system_solver

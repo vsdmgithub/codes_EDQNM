@@ -13,7 +13,7 @@
 
 ! #########################
 ! MODULE: system_auxilaries
-! LAST MODIFIED: 21 JUNE 2022
+! LAST MODIFIED: 15 NOV 2022
 ! #########################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -224,4 +224,22 @@ MODULE system_auxilaries
     END
 ! </f>
 
+	DOUBLE PRECISION FUNCTION solid_angle( dim0 )
+! <f
+	! ------------
+	! FUNCTION TO: Calculate the solid angle in 'd' dimension
+	! -------------
+		IMPLICIT NONE
+		! _________________________
+		! TRANSFER  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		DOUBLE PRECISION,INTENT(IN)::dim0
+		DOUBLE PRECISION::dd
+		dd = hf * ( dim0 + 1 )
+		solid_angle = two * ( ( hf * two_pi ) ** dd ) / DGAMMA( dd )
+
+		RETURN
+
+	END
+! </f>
 END MODULE system_auxilaries
