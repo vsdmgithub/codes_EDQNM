@@ -174,7 +174,6 @@ MODULE system_solver
 	END DO
 	END DO
 	END DO
-
 	END
 ! </f>
 
@@ -200,10 +199,13 @@ MODULE system_solver
 		E_k = en_spec( k_ind )
 		E_p = en_spec( p_ind )
 		E_q = en_spec( q_ind )
-
 		integrand  =  ( k_d * E_p - p_d * E_k ) * E_q
 		integrand  =  integrand * geom_B( k_ind, q_ind, p_ind ) * eddy_damping
 		integrand  =  integrand * weightage(k_ind, q_ind, p_ind)
+		IF (integrand .GT. 1E5) THEN
+			print*,"NaN here ",integrand,weightage(k_ind,q_ind,p_ind),k_ind,q_ind,p_ind
+			nan_status=1
+		END IF
 
 	END
 ! </f>

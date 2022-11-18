@@ -168,22 +168,6 @@ IMPLICIT  NONE
 		DOUBLE PRECISION::time_min,visc_ref
 		INTEGER(KIND=4)::N_ref,cfl_ref
 
-		dim                                   = 8.0D0
-		! Dimension of the space in which EDQNM is computed
-
-		dim_min_3                             = dim - thr
-
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! S P E C T R U M A N D T I M E
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-		wno_scale                             = two ** ( 0.25D0 )
-		wno_scale_log                         = DLOG( wno_scale )
-		! Ratio of consecutive shells
-
-		wno_base                              = two ** ( - thr )
-		! Base wavenumber
-
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! NOTES:
 		! 1. This is forced viscous EDQNM, with forcing given in the first
@@ -194,6 +178,30 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
+
+		dim                                   = 2.0
+		dim_min_3                             = dim - thr
+		! Dimension of the space in which EDQNM is computed
+
+		visc_status                           = 1
+		! '1' to include viscosity, '0' to do inviscid forcing
+
+		forc_status                           = 1 * visc_status
+		! '1' to activate forcing, '0' to deactivate forcing
+
+		! visc_ref                              = 5E-4
+		visc_ref                              = 2E-3
+		N_ref                                 = 45
+		! Viscosity standard (minimum) for N  =45
+
+		wno_scale                             = two ** ( 0.25D0 )
+
+		visc                                  = visc_ref * ( wno_scale ** ( N_ref - N ) )
+		! Adjusted minimum viscosity for the current N
+
+		! visc                                = 0.001
+		! UNCOMMENT FOR CUSTOM VISCOSITY
+
 		energy0                               = one
 		! Initial energy
 
@@ -201,7 +209,7 @@ IMPLICIT  NONE
 		! In case if you want to force constantly,
 		! UNCOMMENT adjusted 'ds_rate_ref' in ==> system.main
 
-		fback_coef                            = one
+		fback_coef                            = 0.1
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
 		kI_ind                                = CEILING( DBLE( N ) / 10.0D0 )
@@ -210,16 +218,15 @@ IMPLICIT  NONE
 		kD_ind                                = N - CEILING( DBLE( N ) / 4 )
 		! Index (position) and wavenumber of dissipation scale
 
-		! visc_ref                              = 5E-4
-		visc_ref                              = 2E-3
-		N_ref                                 = 45
-		! Viscosity standard (minimum) for N  =45
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! S P E C T R U M       A N D            T I M E
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		visc                                  = visc_ref * ( wno_scale ** ( N_ref - N ) )
-		! Adjusted minimum viscosity for the current N
+		wno_scale_log                         = DLOG( wno_scale )
+		! Ratio of consecutive shells
 
-		! visc                                = 0.001
-		! UNCOMMENT FOR CUSTOM VISCOSITY
+		wno_base                              = two ** ( - thr )
+		! Base wavenumber
 
 		wno_min                               = wno_base
 		! Min wave number
@@ -282,12 +289,6 @@ IMPLICIT  NONE
 
 		sym_const                             = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
 		! Const of integration in 'd' dimension for the transfer term
-
-		visc_status                           = 1
-		! '1' to include viscosity, '0' to do inviscid forcing
-
-		forc_status                           = 1 * visc_status
-		! '1' to activate forcing, '0' to deactivate forcing
 
 		sim_status                            = 0
 		! This being the first variable to start the simulation. At last, it will be set to '1'

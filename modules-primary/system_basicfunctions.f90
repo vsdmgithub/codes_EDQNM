@@ -77,11 +77,13 @@ MODULE system_basicfunctions
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION:: wno_p_min,wno_p_max
 		DOUBLE PRECISION:: z_f, x_f, y_f
-		DOUBLE PRECISION:: wei,geo
+		DOUBLE PRECISION:: wei,geo,dim_factor
+		INTEGER(KIND=4)::triad_deleted
 
-		kqp_status = 0
-		geom_B     = zero
-		triad_count= 0
+		kqp_status    = 0
+		geom_B        = zero
+		triad_count   = 0
+		triad_deleted = 0
 		! Reseting arrays to zero for safety
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -115,25 +117,43 @@ MODULE system_basicfunctions
 					geom_B( k_ind, q_ind, p_ind )     = geo * wno( p_ind ) / wno( k_ind )
 					! GEOMETRIC FACTOR 'B' IN THE E.D.Q.N.M
 
+					IF ( dim_min_3 .LT. 0 ) THEN
+					  IF ( DABS( x_f ** two - one ) .LT. tol_float ) THEN
+							dim_factor = zero
+							triad_deleted = triad_deleted + 1
+							! To avoid NaN
+						ELSE
+							dim_factor = DSQRT( ( one - ( x_f ** two ) ) / ( wno( k_ind ) ** two ) ) ** dim_min_3
+						END IF
+					END IF
+
 					wei                               = wno_band( q_ind ) * wno_band( p_ind )
 					! FACTOR OF AREA OF THE STRIP IN 'QP' PLANE
 					wei                               = wei * sym_const
 					! FACTOR OF 8*S_(D-2)/S_(D-1)
 					wei                               = wei * wno( k_ind ) / ( wno( q_ind ) * wno( p_ind ) )
 					! FACTOR OF K/PQ
-					weightage( k_ind, q_ind, p_ind )  = wei * ( DSQRT( ( one - ( x_f ** two ) ) / ( wno( k_ind ) ** two ) ) ** dim_min_3 )
+					wei                               = wei * dim_factor
+					weightage( k_ind, q_ind, p_ind )  = wei
 					! FACTOR of ( (1-x^2)/k^2 ) ** (d-3)/2
 
 					triad_count                       = triad_count + 1
 					! COUNTING THE TRIAD
 
+					IF (wei .GT. 1E4) THEN
+						print*,"NaN here ",weightage(k_ind,q_ind,p_ind),geo,x_f
+					! 	nan_status=1
+					END IF
 				END IF
 
 			END DO
 
 		END DO
 		END DO
-! print*,N*N*N,triad_count
+
+		triad_count = triad_count - triad_deleted
+		! Subracting the triads that are deleted
+
 	END
 ! </f>
 
@@ -199,6 +219,7 @@ MODULE system_basicfunctions
 			fl_spec( k_ind ) = - SUM( tr_spec( : k_ind) * wno_band( : k_ind) )
 	  END DO
 
+		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy',en_spec) !  ENERGY FILE
 		! CALL write_spectrum('transfer',tr_spec) !  ENERGY TRANSFER FILE
 		! CALL write_spectrum('flux',fl_spec)     !  FLUX  FILE
@@ -207,8 +228,22 @@ MODULE system_basicfunctions
 		! 	CALL write_spectrum('dissipation',two * visc * laplacian_k * en_spec) !  DISSIPATION FILE
 		! END IF
 
+		! UNCOMMENT TO WRITE IN SINGLE FILE
 		CALL write_energy_spectrum()
 
+	END
+! </f>
+
+	SUBROUTINE compute_temporal_data
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! TO compute net energy, enstrophy, dissipation and skewness for every time step
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! T E M P O R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

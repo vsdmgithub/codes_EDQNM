@@ -203,24 +203,55 @@ MODULE system_basicoutput
 		CLOSE(818)
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+		! CALL write_triad( 5 )
+		CALL write_triad( 10 )
+		! CALL write_triad( N-5 )
+		! CALL write_triad( N-10 )
+		! Writes all possible q,p for given k
+
+	END
+! </f>
+
+	SUBROUTINE write_triad( k_ind0 )
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Write the list of q,p in the triad
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		! _________________________
+		! TRANSFER  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		CHARACTER(LEN=10)::k_name
+		INTEGER(KIND=4),INTENT(IN):: k_ind0
+
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		file_name = TRIM( ADJUSTL( file_address ) ) // 'triad_k10.dat'
-		k_ind = 10
+		!  P  R  I  N   T          O  U  T  P  U  T
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+		WRITE (k_name,f_i2) k_ind0
+		! Writes 'k_ind0' as a CHARACTER
+
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		file_name = TRIM( ADJUSTL( file_address ) ) // 'triad_' // TRIM( ADJUSTL ( k_name ) ) // '.dat'
 		OPEN(UNIT = 828, FILE = file_name)
 
 		DO p_ind = 1, N
 		DO q_ind = 1, N
-			IF ( kqp_status( k_ind, q_ind, p_ind ) .EQ. 1 ) THEN
-				WRITE(828,f_i6,ADVANCE = 'no')  k_ind
+			IF ( kqp_status( k_ind0, q_ind, p_ind ) .EQ. 1 ) THEN
+				WRITE(828,f_i6,ADVANCE = 'no')  k_ind0
 				WRITE(828,f_i6,ADVANCE = 'no')  p_ind
-				WRITE(828,f_i6,ADVANCE = 'yes')  q_ind
 			END IF
+			WRITE(828,f_i6,ADVANCE = 'yes') q_ind
 		END DO
 		END DO
 
 		CLOSE(828)
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	END
+  END
 ! </f>
 
 	SUBROUTINE write_spectrum( data_name, data_k )

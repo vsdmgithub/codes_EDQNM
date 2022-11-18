@@ -118,7 +118,7 @@ MODULE system_main
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
-		DO t_step = 0, t_step_total
+		DO t_step = 0, t_step_total 
 
 			CALL inter_analysis
 
@@ -128,7 +128,7 @@ MODULE system_main
 			CALL rk4_algorithm
 			! Updates velocity field as per EDQNM equation for next time step
 
-			IF ( nan_count .GT. 0) THEN
+			IF ( nan_status .EQ. 1 ) THEN
 
 				CALL print_error_nan
 				! REF-> <<< system_basicoutput >>>
@@ -168,8 +168,8 @@ MODULE system_main
 
 		IF (MOD(t_step,t_step_save) .EQ. 0) THEN
 
-			WRITE (file_time,f_d8p4) time_now
 			! Writes 'time_now' as a CHARACTER
+			WRITE (file_time,f_d8p4) time_now
 
 			CALL compute_transfer_term
 			! REF-> <<< system_solver >>>
@@ -181,6 +181,9 @@ MODULE system_main
 			! REF-> <<< system_advfunctions >>>
 
 		END IF
+
+		CALL compute_temporal_data
+		! REF-> <<< system_basicfunctions >>>
 
 		IF ( (MOD(t_step,t_step_forcing) .EQ. 0 ) .AND. ( forc_status .EQ. 1 ) ) THEN
 
