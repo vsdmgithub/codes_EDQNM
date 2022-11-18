@@ -154,13 +154,17 @@ MODULE system_basicoutput
 		WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 		WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-		WRITE(233,"(A1,A20,A2,F8.2)")      '*',' Dimension of sys',               '= ',dim
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing time steps   ',          '= ',t_step_forcing
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Energy timescale  ',             '= ',time_rms
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial energy ',                '= ',energy0
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
@@ -176,13 +180,16 @@ MODULE system_basicoutput
 		WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 		WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-		WRITE(*,"(A1,A20,A2,F8.2)")      '*',' Dimension of sys',               '= ',dim
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing time steps   ',          '= ',t_step_forcing
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Energy timescale  ',             '= ',time_rms
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial energy ',                '= ',energy0
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
@@ -204,9 +211,12 @@ MODULE system_basicoutput
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 		! CALL write_triad( 5 )
-		CALL write_triad( 10 )
-		! CALL write_triad( N-5 )
-		! CALL write_triad( N-10 )
+		! CALL write_triad( 10 )
+		! CALL write_triad( 20 )
+		! CALL write_triad( 30 )
+		! CALL write_triad( 40 )
+		! CALL write_triad( N-15 )
+		CALL write_triad( N-8 )
 		! Writes all possible q,p for given k
 
 	END
@@ -239,13 +249,13 @@ MODULE system_basicoutput
 		file_name = TRIM( ADJUSTL( file_address ) ) // 'triad_' // TRIM( ADJUSTL ( k_name ) ) // '.dat'
 		OPEN(UNIT = 828, FILE = file_name)
 
-		DO p_ind = 1, N
 		DO q_ind = 1, N
+		DO p_ind = p_ind_min( k_ind0, q_ind ), p_ind_max( k_ind0, q_ind )
 			IF ( kqp_status( k_ind0, q_ind, p_ind ) .EQ. 1 ) THEN
 				WRITE(828,f_i6,ADVANCE = 'no')  k_ind0
-				WRITE(828,f_i6,ADVANCE = 'no')  p_ind
+				WRITE(828,f_i6,ADVANCE = 'no')  q_ind
+				WRITE(828,f_i6,ADVANCE = 'yes') p_ind
 			END IF
-			WRITE(828,f_i6,ADVANCE = 'yes') q_ind
 		END DO
 		END DO
 

@@ -140,10 +140,15 @@ MODULE system_basicfunctions
 					triad_count                       = triad_count + 1
 					! COUNTING THE TRIAD
 
-					IF (wei .GT. 1E4) THEN
+					IF (wei .GT. 1E8) THEN
 						print*,"NaN here ",weightage(k_ind,q_ind,p_ind),geo,x_f
 					! 	nan_status=1
 					END IF
+
+				ELSE
+
+					PRINT*,"TRIANGLE INCOMPATIBLE FOR ",wno(k_ind),wno(q_ind),wno(p_ind)
+
 				END IF
 
 			END DO
@@ -381,9 +386,9 @@ MODULE system_basicfunctions
 
 		triangle_compatibility =  0
 
-		IF ( wno(i1) + wno(i2) .GT. wno(i3) ) THEN
-		IF ( wno(i3) + wno(i2) .GT. wno(i1) ) THEN
-		IF ( wno(i1) + wno(i3) .GT. wno(i2) ) THEN
+		IF ( wno(i1) + wno(i2) .GE. wno(i3) ) THEN
+		IF ( wno(i3) + wno(i2) .GE. wno(i1) ) THEN
+		IF ( wno(i1) + wno(i3) .GE. wno(i2) ) THEN
 
 			triangle_compatibility =  1
 

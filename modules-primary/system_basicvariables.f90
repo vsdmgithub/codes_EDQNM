@@ -209,7 +209,7 @@ IMPLICIT  NONE
 		! In case if you want to force constantly,
 		! UNCOMMENT adjusted 'ds_rate_ref' in ==> system.main
 
-		fback_coef                            = 0.1
+		fback_coef                            = 0.2
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
 		kI_ind                                = CEILING( DBLE( N ) / 10.0D0 )
@@ -240,7 +240,7 @@ IMPLICIT  NONE
 		time_visc                             = one / ( visc * ( wno_max ** two ) + tol_float )
 		! Time scale from viscosity and largest momentum, tol_float is added to avoid NaN in case of inviscid
 
-		cfl_ref                               = 20
+		cfl_ref                               = 10
 		! Minimum of CFL
 
 		time_min                              = MIN( time_rms, time_visc )
