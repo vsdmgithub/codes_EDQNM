@@ -63,7 +63,7 @@ CHARACTER(LEN=5)::run
 	CALL pre_analysis
 	! REF-> <<< system_main >>>
 
-	run = 'n' ! Easy way to stop the evolution with only initiation
+	run = 'y' ! Easy way to stop the evolution with only initiation
 
 	IF ( (run .EQ. 'y') .AND. ( sys_status .EQ. 1 ) ) THEN
 

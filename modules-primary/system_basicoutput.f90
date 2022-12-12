@@ -95,7 +95,7 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '_d' // TRIM( ADJUSTL( dim_char ) ) // '/'
+		type_sim    =  'MHD_N' // TRIM( ADJUSTL( N_char ) ) // '_d' // TRIM( ADJUSTL( dim_char ) ) // '/'
 		! type of simulation, the data is storing
 
 		CALL get_simulation_name(name_sim)
@@ -158,18 +158,29 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing time steps   ',          '= ',t_step_forcing
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Energy timescale  ',             '= ',time_rms
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
-		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial energy ',                '= ',energy0
+		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial mag.energy ',            '= ',energy_B_0
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(233,"(A1,A20,A2,I8)")      '*','Total Triad count ',             '= ',triad_count
-		WRITE(233,"(A1,A20,A2,I8)")      '*','Forcing status   ',              '= ',forc_status
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Diss. wavenumber  ',             '= ',wno( kD_ind )
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+		WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 
 		CLOSE(233)
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -184,17 +195,29 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing time steps   ',          '= ',t_step_forcing
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Energy timescale  ',             '= ',time_rms
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
-		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial energy ',                '= ',energy0
+		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial mag.energy ',            '= ',energy_B_0
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(*,"(A1,A20,A2,I8)")      '*','Total Triad count ',             '= ',triad_count
-		WRITE(*,"(A1,A20,A2,I8)")      '*','Forcing status   ',         	     '= ',forc_status
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Diss. wavenumber  ',             '= ',wno( kD_ind )
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+		WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		file_name = TRIM( ADJUSTL( file_address ) ) // 'wavenumbers.dat'
@@ -210,13 +233,10 @@ MODULE system_basicoutput
 		CLOSE(818)
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-		! CALL write_triad( 5 )
-		! CALL write_triad( 10 )
-		! CALL write_triad( 20 )
-		! CALL write_triad( 30 )
-		! CALL write_triad( 40 )
-		! CALL write_triad( N-15 )
-		CALL write_triad( N-8 )
+		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // 'triads/' )
+		DO k_ind = 1, N, 3
+			CALL write_triad( k_ind )
+		END DO
 		! Writes all possible q,p for given k
 
 	END
@@ -246,16 +266,14 @@ MODULE system_basicoutput
 		! Writes 'k_ind0' as a CHARACTER
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		file_name = TRIM( ADJUSTL( file_address ) ) // 'triad_' // TRIM( ADJUSTL ( k_name ) ) // '.dat'
+		file_name = TRIM( ADJUSTL( file_address ) ) // 'triads/triad_' // TRIM( ADJUSTL ( k_name ) ) // '.dat'
 		OPEN(UNIT = 828, FILE = file_name)
 
 		DO q_ind = 1, N
 		DO p_ind = p_ind_min( k_ind0, q_ind ), p_ind_max( k_ind0, q_ind )
-			IF ( kqp_status( k_ind0, q_ind, p_ind ) .EQ. 1 ) THEN
 				WRITE(828,f_i6,ADVANCE = 'no')  k_ind0
 				WRITE(828,f_i6,ADVANCE = 'no')  q_ind
 				WRITE(828,f_i6,ADVANCE = 'yes') p_ind
-			END IF
 		END DO
 		END DO
 
@@ -300,7 +318,7 @@ MODULE system_basicoutput
   END
 ! </f>
 
-	SUBROUTINE write_energy_spectrum()
+	SUBROUTINE write_kinetic_energy_spectrum()
 	! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -314,7 +332,7 @@ MODULE system_basicoutput
 		!  P  R  I  N   T          O  U  T  P  U  T
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		file_name = TRIM( ADJUSTL( file_address ) ) // TRIM( ADJUSTL ( sub_dir_sp )) &
-		            // 'spectral_data_t_'// TRIM( ADJUSTL( file_time ) ) // '.dat'
+		            // 'spectral_data_V_t_'// TRIM( ADJUSTL( file_time ) ) // '.dat'
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		OPEN(UNIT = 882, FILE = file_name)
@@ -322,10 +340,10 @@ MODULE system_basicoutput
 		DO k_ind = 1, N
 
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes') two * visc * laplacian_k( k_ind ) * en_spec( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_V( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_V( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'yes') laplacian_k( k_ind ) * en_spec_V( k_ind )
 
 		END DO
 
@@ -334,7 +352,41 @@ MODULE system_basicoutput
   END
 ! </f>
 
-	SUBROUTINE write_temporal_data
+	SUBROUTINE write_magnetic_energy_spectrum()
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Write all spectral data in a single file (optional)
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  P  R  I  N   T          O  U  T  P  U  T
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		file_name = TRIM( ADJUSTL( file_address ) ) // TRIM( ADJUSTL ( sub_dir_sp )) &
+		            // 'spectral_data_B_t_'// TRIM( ADJUSTL( file_time ) ) // '.dat'
+
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		OPEN(UNIT = 882, FILE = file_name)
+
+		DO k_ind = 1, N
+
+			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'yes') laplacian_k( k_ind ) * en_spec_B( k_ind )
+
+		END DO
+
+		CLOSE(882)
+
+  END
+! </f>
+
+	SUBROUTINE write_kinetic_temporal_data
 	! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -350,7 +402,7 @@ MODULE system_basicoutput
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		IF ( t_step .EQ. 0 ) THEN
 
-			file_name = TRIM( ADJUSTL( file_address ) ) // 'energy_vs_time.dat'
+			file_name = TRIM( ADJUSTL( file_address ) ) // 'energy_V_vs_time.dat'
 			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			OPEN(unit = 4004, file = file_name )
 			! File where energy vs time will be written. With additional data
@@ -358,17 +410,58 @@ MODULE system_basicoutput
 		END IF
 
 		WRITE(4004,f_d8p4,ADVANCE   ='no')  time_now
-		WRITE(4004,f_d32p17,ADVANCE ='no')  energy
-		WRITE(4004,f_d32p17,ADVANCE ='no')  enstrophy
+		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_V
 
 		IF ( visc_status .EQ. 1 ) THEN
-			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate
+			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate_V
 		END IF
+
+		WRITE(4004,f_d32p17,ADVANCE ='no')  enstrophy_V
 
 		WRITE(4004,f_d32p17,ADVANCE ='yes') skewness
 
 		IF ( t_step .EQ. t_step_total ) THEN
 			CLOSE(4004)
+		END IF
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+	END
+! </f>
+
+	SUBROUTINE write_magnetic_temporal_data
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! write the data in time, for every timestep
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!   E N E R G Y    V S    T I M E
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		IF ( t_step .EQ. 0 ) THEN
+
+			file_name = TRIM( ADJUSTL( file_address ) ) // 'energy_B_vs_time.dat'
+			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			OPEN(unit = 4005, file = file_name )
+			! File where energy vs time will be written. With additional data
+
+		END IF
+
+		WRITE(4005,f_d8p4,ADVANCE   ='no')  time_now
+		WRITE(4005,f_d32p17,ADVANCE ='no')  energy_B
+
+		IF ( diff_status .EQ. 1 ) THEN
+			WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_B
+		END IF
+
+		WRITE(4005,f_d32p17,ADVANCE ='yes')  enstrophy_B
+
+		IF ( t_step .EQ. t_step_total ) THEN
+			CLOSE(4005)
 		END IF
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -389,14 +482,14 @@ MODULE system_basicoutput
 		IF ( t_step .EQ. 0 ) THEN
 
 			WRITE(*,'(A63)')'-----------------------------------------------------------'
-			WRITE(*,'(A63)')'|   TIME     |     ENERGY    |       ENSTROPHY   |  DISS  RATE  |'
+			WRITE(*,'(A63)')'|   TIME     |     ENERGY-V  |    ENERGY-B   |  ENERGY TOT|'
 			WRITE(*,'(A63)')'-----------------------------------------------------------'
 
 		END IF
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		WRITE(*,'(A4,F8.4,A4,F12.8,A4,F16.6,A4,F12.8,A4)')'|   ',time_now,' |  '&
-		,energy,' |  ',enstrophy,' |  ',ds_rate,' | '
+		,energy_V,' |  ',energy_B,' |  ',energy_tot,' | '
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 		IF ( t_step .EQ. t_step_total ) THEN

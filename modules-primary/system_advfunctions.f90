@@ -112,7 +112,7 @@ MODULE system_advfunctions
 
 			IF ( kqp_status( k_ind, q_ind, p_ind )  .EQ. 1 ) THEN
 
-				CALL transfer_term_integrand
+				CALL transfer_term_integrand_V
 				! Getting the integrand term
 
 				triad_sides =   (/ wno( k_ind ), wno( q_ind ), wno( p_ind ) /)
@@ -124,14 +124,14 @@ MODULE system_advfunctions
 				IF ( min_max_ratio .LE. local_ratio ) THEN
 
 					flux_pos_nonlocal( k2_ind ) = flux_pos_nonlocal( k2_ind ) &
-					+ integrand * wno_band( k_ind )
+					+ integrand_V * wno_band( k_ind )
 					! Summation terms over all possible k,q,p for a given k'
 					! in the region of nonlocal interactions.
 
 				END IF
 
 				flux_pos( k2_ind ) = flux_pos( k2_ind ) &
-				+ integrand * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
+				+ integrand_V * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
 	    ! Summation terms over all possible k,q,p for a given k'.
 
 			END IF
@@ -155,7 +155,7 @@ MODULE system_advfunctions
 
 		IF ( kqp_status( k_ind, q_ind, p_ind )  .EQ. 1 ) THEN
 
-			CALL transfer_term_integrand
+			CALL transfer_term_integrand_V
 			! Getting the integrand term
 
 			triad_sides =   (/ wno( k_ind ), wno( q_ind ), wno( p_ind ) /)
@@ -167,14 +167,14 @@ MODULE system_advfunctions
 			IF ( min_max_ratio .LE. local_ratio ) THEN
 
 				flux_neg_nonlocal( k2_ind ) = flux_neg_nonlocal( k2_ind ) &
-				+ integrand * wno_band( k_ind )
+				+ integrand_V * wno_band( k_ind )
 				! Summation terms over all possible k,q,p for a given k'
 				!  in the region of nonlocal interactions.
 
 			END IF
 
 			flux_neg( k2_ind ) = flux_neg( k2_ind ) &
-			+ integrand * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
+			+ integrand_V * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
 			! Summation terms over all possible k,q,p for a given k'.
 
 		END IF

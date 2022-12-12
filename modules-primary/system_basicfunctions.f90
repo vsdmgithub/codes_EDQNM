@@ -38,6 +38,10 @@ MODULE system_basicfunctions
 	! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 
 	IMPLICIT  NONE
+	! _________________________
+	! ARRAYS
+	! !!!!!!!!!!!!!!!!!!!!!!!!!
+	INTEGER(KIND=4),DIMENSION(:,:,:),ALLOCATABLE  ::kqp_status
 
 	CONTAINS
 ! </f>
@@ -57,8 +61,8 @@ MODULE system_basicfunctions
 		!  A  R  R  A  Y     A  L  L  O  C  A  T  I  O  N
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		ALLOCATE( p_ind_min( N, N ), p_ind_max( N, N ) )
-		ALLOCATE( kqp_status( N, N, N ), geom_B( N, N, N ), weightage( N, N, N ) )
-		ALLOCATE( eddy_array( N ) )
+		ALLOCATE( geom_b( N, N, N), geom_c( N, N, N ), geom_h( N, N, N ) )
+		ALLOCATE( triad_weightage( N, N, N ) )
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	END
 ! </f>
@@ -77,14 +81,16 @@ MODULE system_basicfunctions
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION:: wno_p_min,wno_p_max
 		DOUBLE PRECISION:: z_f, x_f, y_f
-		DOUBLE PRECISION:: wei,geo,dim_factor
-		INTEGER(KIND=4)::triad_deleted
+		DOUBLE PRECISION:: wp,wq,wk
+		DOUBLE PRECISION:: geom_factor
+		DOUBLE PRECISION:: geo,triad_factor
 
-		kqp_status    = 0
-		geom_B        = zero
+		ALLOCATE( kqp_status( N, N, N ) )
+
 		triad_count   = 0
 		triad_deleted = 0
-		! Reseting arrays to zero for safety
+		kqp_status    = 0
+		! Reseting to zero for safety
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  L I M I T S   O F    I N T E G R A T I O N
@@ -99,50 +105,57 @@ MODULE system_basicfunctions
 			p_ind_max( k_ind, q_ind )           = lowerindex( wno_p_max )
 			! FINDING THE MIN/MAXIMUM OF 'p_ind' FOR EVERY PAIR OF 'k_ind,q_ind'
 
-			! print*,wno(k_ind),wno(q_ind),wno(p_ind_min(k_ind,q_ind)),wno(p_ind_max(k_ind,q_ind))
-
 			DO p_ind = p_ind_min( k_ind, q_ind ), p_ind_max( k_ind, q_ind )
 
 				IF ( triangle_compatibility( k_ind, q_ind, p_ind ) .EQ. 1 ) THEN
+				! THIS HAS TO BE TRUE, OTHERWISE THERE IS AN AN ERROR IN THE UPPER AND LOWER INDEX DETERMINATION
 
 					kqp_status( k_ind, q_ind, p_ind ) = 1
-					! MEANING, THE GIVEN THREE MOMENTUM 'p,k,q' CAN FORM A TRIANGLE.
-
-					x_f                               = - cosine( q_ind, p_ind, k_ind )
+					x_f                               = + cosine( q_ind, p_ind, k_ind )
 					y_f                               = + cosine( k_ind, q_ind, p_ind )
 					z_f                               = + cosine( k_ind, p_ind, q_ind )
 					! FINDING COSINES FOR ALL THREE SIDES ONCE IT IS APPROVED TO PARTICIPATE IN THE TRIAD INTERACTION
 
+					! GEOMETRIC FACTORS DEFINED THROUGH X,Y,Z
 					geo                               = ( ( z_f ** thr ) + x_f * y_f + dim_min_3 * hf * ( z_f + x_f * y_f ) )
-					geom_B( k_ind, q_ind, p_ind )     = geo * wno( p_ind ) / wno( k_ind )
-					! GEOMETRIC FACTOR 'B' IN THE E.D.Q.N.M
+					geom_b( k_ind, q_ind, p_ind )     = geo * wno( p_ind ) / wno( k_ind )
+					geo                               = ( z_f * ( one -  y_f * y_f ) + dim_min_3 * hf * ( z_f + x_f * y_f ) )
+					geom_c( k_ind, q_ind, p_ind )     = geo * wno( p_ind ) / wno( k_ind )
+					geo                               = ( dim - one ) * hf * ( z_f + x_f * y_f )
+					geom_h( k_ind, q_ind, p_ind )     = geo * wno( p_ind ) / wno( k_ind )
 
-					IF ( dim_min_3 .LT. 0 ) THEN
+					! GEOMETRIC FACTORS DEFINED THROUGH K,P,Q
+					! wk                            = wno( k_ind )
+					! wp                            = wno( p_ind )
+					! wq                            = wno( q_ind )
+					! geom_factor                   = (wk+wp+wq)*(wk+wp-wq)*(wk-wp+wq)*(-wk+wp+wq)/(8.0D0*wk*wk*wq*wq)
+					! geo                           = geom_factor * ( (dim-one)*wk*wk*wp*wp - ( wk*wk + wp*wp )*wq*wq + wq**4.0d0 )
+					! geom_b( k_ind, q_ind, p_ind ) = geo/(wk*wk*wp*wp)
+					! geo                           = geom_factor * ( (dim-two)*wk*wk + wp*wp - wq*wq )
+					! geom_c( k_ind, q_ind, p_ind ) = geo/(wk*wk)
+					! geo                           = geom_factor * (dim - one)
+					! geom_h( k_ind, q_ind, p_ind ) = geo
+
+					IF ( dim_min_3 .LT. -0.01D0 ) THEN
 					  IF ( DABS( x_f ** two - one ) .LT. tol_float ) THEN
-							dim_factor = zero
+							triad_factor  = zero
 							triad_deleted = triad_deleted + 1
-							! To avoid NaN
+							! TO AVOID NAN
 						ELSE
-							dim_factor = DSQRT( ( one - ( x_f ** two ) ) / ( wno( k_ind ) ** two ) ) ** dim_min_3
+							triad_factor  = DSQRT( DABS( one - ( x_f ** two ) ) / ( wno( k_ind ) ** two ) ) ** dim_min_3
 						END IF
+					ELSE
+						triad_factor    = DSQRT( DABS( one - ( x_f ** two ) ) / ( wno( k_ind ) ** two ) ) ** dim_min_3
 					END IF
-
-					wei                               = wno_band( q_ind ) * wno_band( p_ind )
-					! FACTOR OF AREA OF THE STRIP IN 'QP' PLANE
-					wei                               = wei * sym_const
-					! FACTOR OF 8*S_(D-2)/S_(D-1)
-					wei                               = wei * wno( k_ind ) / ( wno( q_ind ) * wno( p_ind ) )
-					! FACTOR OF K/PQ
-					wei                               = wei * dim_factor
-					weightage( k_ind, q_ind, p_ind )  = wei
 					! FACTOR of ( (1-x^2)/k^2 ) ** (d-3)/2
 
-					triad_count                       = triad_count + 1
+					triad_weightage( k_ind, q_ind, p_ind ) = dim_const * triad_factor
+					triad_count                            = triad_count + 1
 					! COUNTING THE TRIAD
 
-					IF (wei .GT. 1E8) THEN
-						print*,"NaN here ",weightage(k_ind,q_ind,p_ind),geo,x_f
-					! 	nan_status=1
+					IF (triad_weightage( k_ind, q_ind, p_ind ) .NE. triad_weightage( k_ind, q_ind, p_ind ) ) THEN
+						PRINT*,"NaN HERE AT TRIAD WEIGHTAGE",k_ind,q_ind,p_ind,triad_weightage(k_ind,q_ind,p_ind)
+						nan_status=1
 					END IF
 
 				ELSE
@@ -171,6 +184,10 @@ MODULE system_basicfunctions
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT NONE
+		! DOUBLE PRECISION:: dum,wp,wq,wk
+		er_V_self = zero
+		er_B_self = zero
+		er_VB     = zero
 		!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   T  R  I  A  D      D  E  B  U  G
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -186,7 +203,7 @@ MODULE system_basicfunctions
 				sys_status = 0
 			END IF
 
-		DO p_ind = 1, N
+		DO p_ind = 1, 5
 
 			IF ( kqp_status( k_ind, q_ind, p_ind ) .NE. kqp_status( k_ind, p_ind, q_ind) ) THEN
 				PRINT*,'ERROR IN TRIAD : kqp is ',kqp_status( k_ind, q_ind, p_ind ),' whereas kpq is ',kqp_status( k_ind, p_ind, q_ind )
@@ -199,10 +216,20 @@ MODULE system_basicfunctions
 				sys_status = 0
 			END IF
 
+			IF ( kqp_status( k_ind, q_ind, p_ind ) .EQ. 1 ) THEN
+				er_V_self = er_V_self+ DABS( laplacian_k( k_ind ) * geom_b( k_ind, q_ind, p_ind ) &
+				 													 - laplacian_k( p_ind ) * geom_b( p_ind, q_ind, k_ind ) )
+				er_B_self = er_B_self+ DABS( laplacian_k( k_ind ) * geom_h( k_ind, q_ind, p_ind ) &
+				 													 - laplacian_k( p_ind ) * geom_h( p_ind, q_ind, k_ind ) )
+				er_VB     = er_VB + DABS( geom_b( k_ind, q_ind, p_ind ) + geom_b( k_ind, p_ind, q_ind ) &
+				 										- geom_c( k_ind, q_ind, p_ind ) - geom_c( k_ind, p_ind, q_ind ) )
+			END IF
+
 		END DO
 		END DO
 		END DO
 
+		DEALLOCATE( kqp_status )
 	END
 ! </f>
 
@@ -221,20 +248,29 @@ MODULE system_basicfunctions
 		! S P E C T R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	  DO k_ind = 1, N
-			fl_spec( k_ind ) = - SUM( tr_spec( : k_ind) * wno_band( : k_ind) )
+			fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
+			fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
 	  END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
-		! CALL write_spectrum('energy',en_spec) !  ENERGY FILE
-		! CALL write_spectrum('transfer',tr_spec) !  ENERGY TRANSFER FILE
-		! CALL write_spectrum('flux',fl_spec)     !  FLUX  FILE
+		! CALL write_spectrum('energy_V',en_spec_V)
+		! CALL write_spectrum('transfer_V',tr_spec_V)
+		! CALL write_spectrum('flux_V',fl_spec_V)
+		! CALL write_spectrum('energy_B',en_spec_B)
+		! CALL write_spectrum('transfer_B',tr_spec_B)
+		! CALL write_spectrum('flux_B',fl_spec_B)
 		! ! REF-> <<< system_basicoutput >>>
+
 		! IF ( visc_status .EQ. 1 ) THEN
-		! 	CALL write_spectrum('dissipation',two * visc * laplacian_k * en_spec) !  DISSIPATION FILE
+		! 	CALL write_spectrum('dissipation',two * visc * laplacian_k * en_spec_V) !  DISSIPATION FILE
+		! 	CALL write_spectrum('diffusion',  two * diff * laplacian_k * en_spec_B) !  DISSIPATION FILE
 		! END IF
 
 		! UNCOMMENT TO WRITE IN SINGLE FILE
-		CALL write_energy_spectrum()
+		CALL write_kinetic_energy_spectrum()
+		! REF-> <<< system_basicoutput >>>
+		CALL write_magnetic_energy_spectrum()
+		! REF-> <<< system_basicoutput >>>
 
 	END
 ! </f>
@@ -252,23 +288,81 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! T E M P O R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		energy     = SUM( en_spec * wno_band )
-		enstrophy  = SUM( laplacian_k * en_spec * wno_band )
+		energy_V     = SUM( en_spec_V * wno_band )
+		energy_B     = SUM( en_spec_B * wno_band )
+		energy_tot   = SUM( ( en_spec_V + en_spec_B ) * wno_band )
+		enstrophy_V  = SUM( laplacian_k * en_spec_V * wno_band )
+		enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
 
 		IF ( visc_status .EQ. 1 ) THEN
-			ds_rate  = two * visc * enstrophy
+			ds_rate_V  = two * visc * enstrophy_V
+		END IF
+
+		IF ( diff_status .EQ. 1 ) THEN
+			ds_rate_B  = two * diff * enstrophy_B
 		END IF
 
 		IF ( forc_status .EQ. 1 ) THEN
-			skewness = SUM( ( tr_spec + fr_spec ) * laplacian_k * wno_band )
+			skewness = SUM( ( tr_spec_V + fr_spec ) * laplacian_k * wno_band )
 		ELSE
-			skewness = SUM( tr_spec * laplacian_k * wno_band )
+			skewness = SUM( tr_spec_V * laplacian_k * wno_band )
 		END IF
 
-		skewness   = skewness * ( enstrophy ** ( -1.5D0 )) * skewness_const
+		skewness   = skewness * ( enstrophy_V ** ( -1.5D0 )) * skewness_const
 
-		CALL write_temporal_data
+		CALL write_kinetic_temporal_data
+		! REF-> <<< system_basicoutput >>>
+
+		CALL write_magnetic_temporal_data
+		! REF-> <<< system_basicoutput >>>
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE compute_forcing_spectrum
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! TO compute how to initiate forcing spectrum
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  F  O  R  C  I  N  G
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		fr_spec = zero
+
+		! IF ( MOD(t_step,t_step_forcing) .EQ. 0 ) THEN
+		! END IF
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! TYPE OF FORCING
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	 	! 1. Proportional to energy spectrum.
+		! F(k)= f * E(k) for 0<k<kF_ind; f = ds_rate / 0_to_kF ind E(k)dk
+		! --------------------------------------------------------------------------
+		forcing_factor = ds_rate_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
+		DO k_ind = 1, kF_ind
+			fr_spec( k_ind ) = forcing_factor * en_spec_V( k_ind )
+		END DO
+
+		! 2. Constant forcing shape, with varying magnitude,
+		! turn on the fback_coef to keep constant energy
+		! F(k) = f0 A(k), where A(k) is peaked at kI_ind
+		! --------------------------------------------------------------------------
+		! ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
+		! fr_spec       = ds_rate_ref_V * spec0
+
+		! 3. Constant forcing shape, with constant magnitude
+		! F(k) = f0 A(k), where A(k)
+		! --------------------------------------------------------------------------
+		! fr_spec       = ds_rate_ref_V * spec0
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 
 	END
 ! </f>
@@ -284,7 +378,10 @@ MODULE system_basicfunctions
 	IMPLICIT NONE
 
 	DO k_ind = 1, N
-		IF ( en_spec ( k_ind) .NE. en_spec ( k_ind) ) THEN
+		IF ( en_spec_V ( k_ind) .NE. en_spec_V ( k_ind) ) THEN
+			nan_count =  nan_count + 1
+		END IF
+		IF ( en_spec_B ( k_ind) .NE. en_spec_B ( k_ind) ) THEN
 			nan_count =  nan_count + 1
 		END IF
 	END DO
@@ -312,8 +409,8 @@ MODULE system_basicfunctions
 		!  A  R  R  A  Y     D  E   A  L  L  O  C  A  T  I  O  N
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		DEALLOCATE( p_ind_min, p_ind_max )
-		DEALLOCATE( kqp_status, geom_B, weightage )
-		DEALLOCATE( eddy_array )
+		DEALLOCATE( triad_weightage )
+		DEALLOCATE( geom_b, geom_c, geom_h )
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	END

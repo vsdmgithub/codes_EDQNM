@@ -39,7 +39,7 @@ MODULE system_initialcondition
   CONTAINS
 ! </f>
 
-	SUBROUTINE IC_large_eddies
+	SUBROUTINE IC_V_large_eddies
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -52,13 +52,54 @@ MODULE system_initialcondition
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		en_spec = energy0 * spec0
+		en_spec_V = energy_V_0 * spec0
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
 ! </f>
 
-  SUBROUTINE IC_read_from_file
+	SUBROUTINE IC_B_large_eddies
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		en_spec_B = energy_B_0 * spec0
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE IC_B_large_eddies_single_mode
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with a single mode
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! en_spec_B           = tol_float
+		! en_spec_B( 1 ) = energy_B_0 / wno_band( 1 )
+		en_spec_B( kI_ind ) = energy_B_0 / wno_band( kI_ind )
+		! en_spec_B( kD_ind ) = energy_B_0 / wno_band( kD_ind )
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+  SUBROUTINE IC_V_read_from_file
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -77,7 +118,7 @@ MODULE system_initialcondition
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		spec0_address='IC_N41'
+		spec0_address='IC_V_N37'
 		! where initial condition is stored
 
 		OPEN( UNIT = 2001 ,FILE = TRIM(ADJUSTL(spec0_address))//'.dat' )
@@ -85,18 +126,22 @@ MODULE system_initialcondition
 		DO k_ind = 1, N
 
 			READ( 2001, '(F12.6)',ADVANCE='NO')   dum
-			READ( 2001, '(F32.17)',ADVANCE='YES') en_spec( k_ind )
+			READ( 2001, '(F32.17)',ADVANCE='NO') en_spec_V( k_ind )
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='YES')  dum
 
 		END DO
 
 		CLOSE( 2001 )
 
-		! A0   = init_energy / SUM( spec * wno_band )
-		! ! Adjustng the normalization constant.
-		!
-		! spec = A0 * spec
+		A0        = energy_V_0 / SUM( en_spec_V * wno_band )
+		! Adjustng the normalization constant.
+
+		en_spec_V = A0 * en_spec_V
 		! UNCOMMENT TO NORMALIZE ENERGY
 
+		PRINT*,"IC READ SUCCESFULLY"
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END

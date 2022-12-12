@@ -60,7 +60,7 @@ MODULE system_main
 	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	!       T    I    M     E              S    T    E    P              C   H    E   C   K
 	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	IF ( dt .LT. MIN( time_visc, time_rms ) ) THEN
+	IF ( dt .LT. MIN( time_visc, time_rms_V, time_diff ) ) THEN
 
 		sys_status = 1
 
@@ -75,9 +75,15 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-			CALL IC_large_eddies
-			! CALL IC_read_from_file
+			! CALL IC_V_large_eddies
+			CALL IC_V_read_from_file
 			! REF-> <<< system_initialcondition >>>
+
+			IF ( coupling_status .NE. 0 ) THEN
+				CALL IC_B_large_eddies_single_mode
+				! CALL IC_B_large_eddies
+				! REF-> <<< system_initialcondition >>>
+			END IF
 
 			CALL allocate_solver_arrays
 			! REF-> <<< system_solver >>>
@@ -118,15 +124,21 @@ MODULE system_main
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
-		DO t_step = 0, t_step_total 
+		DO t_step = 0, t_step_total
 
 			CALL inter_analysis
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			CALL rk4_algorithm
-			! Updates velocity field as per EDQNM equation for next time step
+			IF ( coupling_status .EQ. 1 ) THEN
+				CALL rk4_algorithm
+			ELSE IF ( coupling_status .EQ. 0 ) THEN
+				CALL rk4_algorithm_V
+			ELSE IF ( coupling_status .EQ. 2 ) THEN
+				CALL rk4_algorithm_B
+			END IF
+			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
 
 			IF ( nan_status .EQ. 1 ) THEN
 
@@ -171,7 +183,8 @@ MODULE system_main
 			! Writes 'time_now' as a CHARACTER
 			WRITE (file_time,f_d8p4) time_now
 
-			CALL compute_transfer_term
+			CALL compute_transfer_term_V
+			CALL compute_transfer_term_B
 			! REF-> <<< system_solver >>>
 
 			CALL compute_spectral_data
@@ -185,15 +198,10 @@ MODULE system_main
 		CALL compute_temporal_data
 		! REF-> <<< system_basicfunctions >>>
 
-		IF ( (MOD(t_step,t_step_forcing) .EQ. 0 ) .AND. ( forc_status .EQ. 1 ) ) THEN
+		IF ( forc_status .EQ. 1 ) THEN
 
-			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			!  F  O  R  C  I  N  G
-			!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			ds_rate_ref = ds_rate - fback_coef * ( energy - energy0 )
-			! UNCOMMENT this to use a fixed forcing via fixed ds_rate_ref
-			fr_spec     = ds_rate_ref * spec0
-			! FORCING SPECTRUM
+		CALL compute_forcing_spectrum
+		! REF-> <<< system_basicfunctions >>>
 
 		END IF
 
