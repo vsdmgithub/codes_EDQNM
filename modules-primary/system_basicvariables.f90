@@ -251,7 +251,7 @@ IMPLICIT  NONE
 		wno_max                               = wno_base * ( wno_scale ** ( N - 1) )
 		! Max wave number
 
-		kI_ind                                = 2
+		kI_ind                                = 4
 		! Index (position) of integral scale
 
 		kF_ind                                = 4
@@ -394,7 +394,7 @@ IMPLICIT  NONE
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  F  O  R  C  I  N  G       T  E  M  P  L  A  T  E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		s_exp = 4.0D0 ! Integral scale spectrum exponent
+		s_exp = 2.0D0 ! Integral scale spectrum exponent
 		dum   = hf / ( wno_int ** two )
 		spec0 = ( (wno / wno_int) ** s_exp ) * DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
