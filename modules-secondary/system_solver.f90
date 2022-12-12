@@ -47,9 +47,9 @@ MODULE system_solver
 	DOUBLE PRECISION:: E_B_k,E_B_p,E_B_q
 	DOUBLE PRECISION:: integrand_V_intr,integrand_V_self
 	DOUBLE PRECISION:: integrand_B_intr,integrand_B_self
-	DOUBLE PRECISION:: lapl_freq,eddy_freq,magn_freq
+	DOUBLE PRECISION:: lapl_freq,eddy_freq,alfven_freq
+	DOUBLE PRECISION:: alfven_k,alfven_p,alfven_q
 	DOUBLE PRECISION:: eddy_k,eddy_q,eddy_p
-	DOUBLE PRECISION:: magn_k,magn_q,magn_p
 	DOUBLE PRECISION:: eddy_damping_V,eddy_damping_Bk
 	DOUBLE PRECISION:: eddy_damping_Bq,eddy_damping_Bp
 	! _________________________
@@ -492,32 +492,40 @@ MODULE system_solver
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		eddy_k            = DSQRT( DABS( SUM( ( en_spec_V(              : k_ind ) + en_spec_B( : k_ind ) ) *&
+		                                         laplacian_k(           : k_ind ) * wno_band(  : k_ind ) ) ) )
+		eddy_p            = DSQRT( DABS( SUM( ( en_spec_V(              : p_ind ) + en_spec_B( : p_ind ) ) *&
+		                                         laplacian_k(           : p_ind ) * wno_band(  : p_ind ) ) ) )
+		eddy_q            = DSQRT( DABS( SUM( ( en_spec_V(              : q_ind ) + en_spec_B( : q_ind ) ) *&
+		                                         laplacian_k(           : q_ind ) * wno_band(  : q_ind ) ) ) )
+		eddy_freq         = eddy_const * ( eddy_k + eddy_q + eddy_p )
 
-		eddy_k          = DSQRT( wno( k_ind )**thr ) * DABS( en_spec_V( k_ind ) + en_spec_B( k_ind ) )
-		eddy_p          = DSQRT( wno( p_ind )**thr ) * DABS( en_spec_V( p_ind ) + en_spec_B( p_ind ) )
-		eddy_q          = DSQRT( wno( q_ind )**thr ) * DABS( en_spec_V( q_ind ) + en_spec_B( q_ind ) )
+		IF ( coupling_status .EQ. 0 ) THEN
 
-		magn_k          = wno( k_ind ) * DSQRT( DABS( SUM( en_spec_B( : k_ind ) * wno_band( : k_ind ) ) ) )
-		magn_p          = wno( p_ind ) * DSQRT( DABS( SUM( en_spec_B( : p_ind ) * wno_band( : p_ind ) ) ) )
-		magn_q          = wno( q_ind ) * DSQRT( DABS( SUM( en_spec_B( : q_ind ) * wno_band( : q_ind ) ) ) )
+			lapl_freq       = visc * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
+			eddy_damping_V  = one / ( lapl_freq + eddy_freq )
 
-		eddy_freq       = eddy_const * ( eddy_k + eddy_q + eddy_p )
-		magn_freq       = magn_const * ( magn_k + magn_q + magn_p )
+		ELSE
 
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! D A M P I N G F A C T O R
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		lapl_freq       = ( visc + diff ) * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
-		eddy_damping_V  = one / ( lapl_freq + eddy_freq + magn_freq )
-		eddy_damping_Bk = eddy_damping_V
-		eddy_damping_Bp = eddy_damping_V
-		eddy_damping_Bq = eddy_damping_V
-		eddy_damping    = eddy_damping_V
+			lapl_freq       = ( visc + diff ) * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
+			alfven_k        = wno( k_ind ) * DSQRT( DABS( SUM( en_spec_B( : k_ind ) * wno_band(  : k_ind ) ) ) )
+			alfven_p        = wno( p_ind ) * DSQRT( DABS( SUM( en_spec_B( : p_ind ) * wno_band(  : p_ind ) ) ) )
+			alfven_q        = wno( q_ind ) * DSQRT( DABS( SUM( en_spec_B( : q_ind ) * wno_band(  : q_ind ) ) ) )
+			alfven_freq     = alfven_const * ( alfven_k + alfven_p + alfven_q )
+
+			eddy_damping_V  = one / ( lapl_freq + eddy_freq + alfven_freq )
+			eddy_damping_Bk = eddy_damping_V
+			eddy_damping_Bp = eddy_damping_V
+			eddy_damping_Bq = eddy_damping_V
+
+		END IF
+		eddy_damping      = eddy_damping_V
 
 		IF ( eddy_damping .NE. eddy_damping ) THEN
 			print*,"NaN here at eddy damping calc ",k_ind,q_ind,p_ind,eddy_damping
 			nan_status=1
 		END IF
+		
 	END
 ! </f>
 

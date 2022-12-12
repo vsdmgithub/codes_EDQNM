@@ -94,7 +94,7 @@ IMPLICIT  NONE
 	! _________________________
 	! SOLVER VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	DOUBLE PRECISION::eddy_const,magn_const
+	DOUBLE PRECISION::eddy_const,alfven_const
 	DOUBLE PRECISION::integrand_V,integrand_B
 	DOUBLE PRECISION::eddy_damping
 	! _________________________
@@ -185,7 +185,7 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                   = 3.0D0
+		dim                                   = thr
 		dim_min_3                             = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
@@ -205,7 +205,7 @@ IMPLICIT  NONE
 		! Reference resolution
 
 		! visc_ref                            = 5E-4
-		visc_ref                              = 1E-3
+		visc_ref                              = 2E-3
 		! Viscosity standard (minimum) for N  =45
 
 		wno_scale                             = two ** ( 0.25D0 )
@@ -216,13 +216,13 @@ IMPLICIT  NONE
 		! visc                                = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                              = 1E-3
+		diff_ref                              = 2E-3
 		! Reference diffusivity
 
 		diff                                  = diff_ref * ( wno_scale ** ( N_ref - N ) )
 		! Adjusted minimum diffusivity for the current N
 
-		! diff                                = 0.001
+		! diff                                = 0.02D0
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
 		prandl_no															= visc / diff
@@ -232,7 +232,7 @@ IMPLICIT  NONE
 		energy_V_0                            = energy_0
 		! Initial kinetic energy
 
-		energy_B_0                            = 1E-5
+		energy_B_0                            = 1E-3
 		! Initial magnetic energy
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -263,7 +263,7 @@ IMPLICIT  NONE
 		ds_rate_ref_V                         = one
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 
-		fback_coef                            = 0.4
+		fback_coef                            = zero
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
@@ -275,7 +275,7 @@ IMPLICIT  NONE
 		time_diff                             = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                               = 20
+		cfl_ref                               = 10
 		! Minimum of CFL
 
 		time_min                              = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -314,8 +314,9 @@ IMPLICIT  NONE
 		! converting dimension to CHARACTER
 
 		kol_const                             = 1.7D0
-		eddy_const                            = 0.19D0 * DSQRT( ( kol_const ) ** thr )
-		magn_const                            = DSQRT( two / thr )
+		alfven_const                          = DSQRT( two / thr )
+		eddy_const                            = 0.36D0
+		! eddy_const                            = 0.19D0 * DSQRT( ( kol_const ) ** thr )
 
 		skewness_const                        = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness
@@ -396,7 +397,7 @@ IMPLICIT  NONE
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		s_exp = 2.0D0 ! Integral scale spectrum exponent
 		dum   = hf / ( wno_int ** two )
-		spec0 = ( (wno / wno_int) ** s_exp ) * DEXP( - dum * laplacian_k )
+		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

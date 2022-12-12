@@ -77,11 +77,13 @@ MODULE system_main
 
 			CALL IC_V_large_eddies
 			! CALL IC_V_read_from_file
+			! en_spec_V = zero
 			! REF-> <<< system_initialcondition >>>
 
 			IF ( coupling_status .NE. 0 ) THEN
 				CALL IC_B_large_eddies_single_mode
 				! CALL IC_B_large_eddies
+				! CALL IC_B_small_eddies
 				! REF-> <<< system_initialcondition >>>
 			END IF
 
@@ -124,6 +126,8 @@ MODULE system_main
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
+		GOTO 922
+
 		DO t_step = 0, t_step_total
 
 			CALL inter_analysis
@@ -150,6 +154,7 @@ MODULE system_main
 
 		END DO
 
+		922 CONTINUE
 		CALL prepare_perturbation_dynamo
 		! REF-> <<< system_basicfunctions >>>
 

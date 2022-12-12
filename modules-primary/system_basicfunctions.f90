@@ -418,8 +418,8 @@ MODULE system_basicfunctions
 		energy_V_0      = energy_0 - energy_B_0
 		en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
-		CALL IC_B_large_eddies_single_mode
-		! CALL IC_B_large_eddies
+		! CALL IC_B_large_eddies_single_mode
+		CALL IC_B_large_eddies
 		! REF-> <<< system_initialcondition >>>
 
 		CALL prepare_output_dynamo
