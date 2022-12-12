@@ -75,8 +75,8 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-			! CALL IC_V_large_eddies
-			CALL IC_V_read_from_file
+			CALL IC_V_large_eddies
+			! CALL IC_V_read_from_file
 			! REF-> <<< system_initialcondition >>>
 
 			IF ( coupling_status .NE. 0 ) THEN
@@ -149,6 +149,29 @@ MODULE system_main
 			END IF
 
 		END DO
+
+		CALL prepare_perturbation_dynamo
+		! REF-> <<< system_basicfunctions >>>
+
+		DO t_step = 0, t_step_total
+
+			CALL inter_analysis
+
+			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
+			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			CALL rk4_algorithm
+			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
+
+			IF ( nan_status .EQ. 1 ) THEN
+
+				CALL print_error_nan
+				! REF-> <<< system_basicoutput >>>
+				EXIT ! Meaning 'NaN' is encountered during the Debug
+
+			END IF
+
+		END DO
 		! ================================================================
 		!                    E     N     D
 		! 8888888888888888888888888888888888888888888888888888888888888888
@@ -184,14 +207,23 @@ MODULE system_main
 			WRITE (file_time,f_d8p4) time_now
 
 			CALL compute_transfer_term_V
-			CALL compute_transfer_term_B
 			! REF-> <<< system_solver >>>
 
-			CALL compute_spectral_data
+			CALL compute_kinetic_spectral_data
 			! REF-> <<< system_basicfunctions >>>
 
 			! CALL flux_decomposition
 			! REF-> <<< system_advfunctions >>>
+
+			IF ( coupling_status .NE. 0 ) THEN
+
+				CALL compute_transfer_term_B
+				! REF-> <<< system_solver >>>
+
+				CALL compute_magnetic_spectral_data
+				! REF-> <<< system_basicfunctions >>>
+
+			END IF
 
 		END IF
 
@@ -200,8 +232,8 @@ MODULE system_main
 
 		IF ( forc_status .EQ. 1 ) THEN
 
-		CALL compute_forcing_spectrum
-		! REF-> <<< system_basicfunctions >>>
+			CALL compute_forcing_spectrum
+			! REF-> <<< system_basicfunctions >>>
 
 		END IF
 

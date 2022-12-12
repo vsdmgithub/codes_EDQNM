@@ -49,7 +49,7 @@ IMPLICIT  NONE
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::dim,dim_min_3
 	DOUBLE PRECISION::wno_base,wno_max,wno_min
-	DOUBLE PRECISION::wno_forc,wno_diss
+	DOUBLE PRECISION::wno_forc,wno_diss,wno_int
 	DOUBLE PRECISION::wno_scale_log,wno_scale
 	! _________________________
 	! TIME (SIMULATION) VARIABLES
@@ -76,7 +76,7 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::triad_deleted
 	INTEGER(KIND=4)::cfl_sys
 	! ---------------------------------------------------------
-	DOUBLE PRECISION::visc,diff
+	DOUBLE PRECISION::visc,diff,prandl_no
 	DOUBLE PRECISION::forcing_factor
 	DOUBLE PRECISION::energy_V_0,energy_B_0
 	DOUBLE PRECISION::energy_V,energy_B
@@ -185,20 +185,20 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                   = 10.0D0
+		dim                                   = 3.0D0
 		dim_min_3                             = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
-		visc_status                           = 0
+		visc_status                           = 1
 		! '1' to include viscosity, '0' to do inviscid
 
-		diff_status                           = 0
+		diff_status                           = 1
 		! '1' to include diffusivity, '0' to do inviscid
 
-		forc_status                           = 0
+		forc_status                           = 1
 		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
 
-		coupling_status                       = 2
+		coupling_status                       = 0
 		! '1' for MHD EDQNM, '0' for only kinetic EDQNM, '2' for only MHD with fixed E(k)
 
 		N_ref                                 = 45
@@ -225,11 +225,14 @@ IMPLICIT  NONE
 		! diff                                = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
+		prandl_no															= visc / diff
+		! Prandl number
+
 		energy_0 															= one
-		energy_V_0                            = energy_0 - 1E-4
+		energy_V_0                            = energy_0
 		! Initial kinetic energy
 
-		energy_B_0                            = energy_0 - energy_V_0
+		energy_B_0                            = 1E-5
 		! Initial magnetic energy
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -248,7 +251,7 @@ IMPLICIT  NONE
 		wno_max                               = wno_base * ( wno_scale ** ( N - 1) )
 		! Max wave number
 
-		kI_ind                                = CEILING( DBLE( N ) / 15.0D0 )
+		kI_ind                                = 2
 		! Index (position) of integral scale
 
 		kF_ind                                = 4
@@ -260,7 +263,7 @@ IMPLICIT  NONE
 		ds_rate_ref_V                         = one
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 
-		fback_coef                            = 0.2
+		fback_coef                            = 0.4
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
@@ -272,7 +275,7 @@ IMPLICIT  NONE
 		time_diff                             = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                               = 15
+		cfl_ref                               = 20
 		! Minimum of CFL
 
 		time_min                              = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -382,15 +385,18 @@ IMPLICIT  NONE
 		wno_forc                              = wno( kF_ind )
 		! Wavenumber of forcing scale
 
+		wno_int                               = wno( kI_ind )
+		! Wavenumber of forcing scale
+
 		wno_diss                              = wno( kD_ind )
 		! Wavenumber of dissipation scale
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  F  O  R  C  I  N  G       T  E  M  P  L  A  T  E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		s_exp = two * two ! Integral scale spectrum exponent
-		dum   = hf / ( wno_forc ** two )
-		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
+		s_exp = 4.0D0 ! Integral scale spectrum exponent
+		dum   = hf / ( wno_int ** two )
+		spec0 = ( (wno / wno_int) ** s_exp ) * DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

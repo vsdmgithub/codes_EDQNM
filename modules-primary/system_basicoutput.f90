@@ -106,7 +106,7 @@ MODULE system_basicoutput
 		! Use this to give CUSTOM SIMULATION NAME
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
-		                 TRIM( ADJUSTL( name_sim ) ) // '/'
+		                 TRIM( ADJUSTL( name_sim ) ) // '/kinetic/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
 
@@ -125,10 +125,40 @@ MODULE system_basicoutput
 
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL( path_dir ) ) )
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) )
+		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) // TRIM( ADJUSTL( name_sim ) ) )
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) )
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // TRIM( ADJUSTL( sub_dir_sp ) ) )
 		! Command to create the main directory and sub directories (name_sim) in the desired path
 		! If exists already, it won't be an error
+
+	END
+! </f>
+
+	SUBROUTINE prepare_output_dynamo
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Create the directories for dynamo study after EDQNM steady state.
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		IMPLICIT  NONE
+
+		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
+		                 TRIM( ADJUSTL( name_sim ) ) // '/dynamo/'
+		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
+		! this address
+		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) )
+		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // TRIM( ADJUSTL( sub_dir_sp ) ) )
+		! Command to create the main directory and sub directories (name_sim) in the desired path
+		! If exists already, it won't be an error
+
+		! CALL write_simulation_details
+		! Writes the parameters used in the simulation
+
+		WRITE(*,'(A63)')'-----------------------------------------------------------'
+		WRITE(*,'(A63)')' DYNAMO EFFECT TESTING: PERTURBATION SEEDED IN MAG. SPECTRUM'
+		WRITE(*,'(A63)')'-----------------------------------------------------------'
 
 	END
 ! </f>
@@ -163,6 +193,7 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
@@ -200,6 +231,7 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
@@ -417,6 +449,7 @@ MODULE system_basicoutput
 		END IF
 
 		WRITE(4004,f_d32p17,ADVANCE ='no')  enstrophy_V
+		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_tot
 
 		WRITE(4004,f_d32p17,ADVANCE ='yes') skewness
 

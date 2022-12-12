@@ -233,7 +233,7 @@ MODULE system_basicfunctions
 	END
 ! </f>
 
-	SUBROUTINE compute_spectral_data
+	SUBROUTINE compute_kinetic_spectral_data
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -249,26 +249,54 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	  DO k_ind = 1, N
 			fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
-			fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
 	  END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy_V',en_spec_V)
 		! CALL write_spectrum('transfer_V',tr_spec_V)
 		! CALL write_spectrum('flux_V',fl_spec_V)
-		! CALL write_spectrum('energy_B',en_spec_B)
-		! CALL write_spectrum('transfer_B',tr_spec_B)
-		! CALL write_spectrum('flux_B',fl_spec_B)
 		! ! REF-> <<< system_basicoutput >>>
 
 		! IF ( visc_status .EQ. 1 ) THEN
 		! 	CALL write_spectrum('dissipation',two * visc * laplacian_k * en_spec_V) !  DISSIPATION FILE
-		! 	CALL write_spectrum('diffusion',  two * diff * laplacian_k * en_spec_B) !  DISSIPATION FILE
 		! END IF
 
 		! UNCOMMENT TO WRITE IN SINGLE FILE
 		CALL write_kinetic_energy_spectrum()
 		! REF-> <<< system_basicoutput >>>
+
+	END
+! </f>
+
+	SUBROUTINE compute_magnetic_spectral_data
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! TO compute all spectral data and write them
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! S P E C T R A L    D A T A
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+	  DO k_ind = 1, N
+			fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
+	  END DO
+
+		! UNCOMMENT TO WRITE IN SEPERATE FILES
+		! CALL write_spectrum('energy_B',en_spec_B)
+		! CALL write_spectrum('transfer_B',tr_spec_B)
+		! CALL write_spectrum('flux_B',fl_spec_B)
+		! ! REF-> <<< system_basicoutput >>>
+
+		! IF ( diff_status .EQ. 1 ) THEN
+		! 	CALL write_spectrum('diffusion',  two * diff * laplacian_k * en_spec_B) !  DISSIPATION FILE
+		! END IF
+
+		! UNCOMMENT TO WRITE IN SINGLE FILE
 		CALL write_magnetic_energy_spectrum()
 		! REF-> <<< system_basicoutput >>>
 
@@ -289,17 +317,10 @@ MODULE system_basicfunctions
 		! T E M P O R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		energy_V     = SUM( en_spec_V * wno_band )
-		energy_B     = SUM( en_spec_B * wno_band )
-		energy_tot   = SUM( ( en_spec_V + en_spec_B ) * wno_band )
 		enstrophy_V  = SUM( laplacian_k * en_spec_V * wno_band )
-		enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
 
 		IF ( visc_status .EQ. 1 ) THEN
 			ds_rate_V  = two * visc * enstrophy_V
-		END IF
-
-		IF ( diff_status .EQ. 1 ) THEN
-			ds_rate_B  = two * diff * enstrophy_B
 		END IF
 
 		IF ( forc_status .EQ. 1 ) THEN
@@ -310,11 +331,24 @@ MODULE system_basicfunctions
 
 		skewness   = skewness * ( enstrophy_V ** ( -1.5D0 )) * skewness_const
 
+		IF ( coupling_status .NE. 0 ) THEN
+
+			energy_B     = SUM( en_spec_B * wno_band )
+			enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
+
+			IF ( diff_status .EQ. 1 ) THEN
+				ds_rate_B  = two * diff * enstrophy_B
+			END IF
+
+			CALL write_magnetic_temporal_data
+			! REF-> <<< system_basicoutput >>>
+
+		END IF
+
+		energy_tot   = SUM( ( en_spec_V + en_spec_B ) * wno_band )
 		CALL write_kinetic_temporal_data
 		! REF-> <<< system_basicoutput >>>
 
-		CALL write_magnetic_temporal_data
-		! REF-> <<< system_basicoutput >>>
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
@@ -344,17 +378,17 @@ MODULE system_basicfunctions
 	 	! 1. Proportional to energy spectrum.
 		! F(k)= f * E(k) for 0<k<kF_ind; f = ds_rate / 0_to_kF ind E(k)dk
 		! --------------------------------------------------------------------------
-		forcing_factor = ds_rate_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
-		DO k_ind = 1, kF_ind
-			fr_spec( k_ind ) = forcing_factor * en_spec_V( k_ind )
-		END DO
+		! forcing_factor = ds_rate_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
+		! DO k_ind = 1, kF_ind
+		! 	fr_spec( k_ind ) = forcing_factor * en_spec_V( k_ind )
+		! END DO
 
 		! 2. Constant forcing shape, with varying magnitude,
 		! turn on the fback_coef to keep constant energy
 		! F(k) = f0 A(k), where A(k) is peaked at kI_ind
 		! --------------------------------------------------------------------------
-		! ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
-		! fr_spec       = ds_rate_ref_V * spec0
+		ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
+		fr_spec       = ds_rate_ref_V * spec0
 
 		! 3. Constant forcing shape, with constant magnitude
 		! F(k) = f0 A(k), where A(k)
@@ -364,6 +398,33 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
+	END
+! </f>
+
+	SUBROUTINE prepare_perturbation_dynamo
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! TO compute how to initiate perturbation for the dynamo testing
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  D  Y  N  A  M  O
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		coupling_status = 1
+		energy_V_0      = energy_0 - energy_B_0
+		en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
+
+		CALL IC_B_large_eddies_single_mode
+		! CALL IC_B_large_eddies
+		! REF-> <<< system_initialcondition >>>
+
+		CALL prepare_output_dynamo
+		! REF-> <<< system_basicoutput >>>
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 	END
 ! </f>
 
