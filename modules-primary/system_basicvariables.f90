@@ -42,14 +42,16 @@ IMPLICIT  NONE
 	! _________________________
 	! SPECTRAL SPACE VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	INTEGER (KIND=4)::N
+	INTEGER (KIND=4)::N,N_log_ref
 	INTEGER (KIND=4)::k_ind,q_ind,p_ind
 	INTEGER (KIND=4)::k2_ind,dum_ind
 	CHARACTER(LEN=60)::N_char,dim_char
+	CHARACTER(LEN=60)::U_char,W_char
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::dim,dim_min_3
 	DOUBLE PRECISION::wno_base,wno_max,wno_min
-	DOUBLE PRECISION::wno_forc,wno_diss,wno_int
+	DOUBLE PRECISION::wno_forc,wno_diss_V,wno_diss_B,wno_int
+	DOUBLE PRECISION::wno_diss_ref
 	DOUBLE PRECISION::wno_scale_log,wno_scale
 	! _________________________
 	! TIME (SIMULATION) VARIABLES
@@ -71,10 +73,12 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::sim_status,sys_status,nan_status
 	INTEGER(KIND=4)::visc_status,diff_status,forc_status
 	INTEGER(KIND=4)::coupling_status
-	INTEGER(KIND=4)::kI_ind,kD_ind,kF_ind
+	INTEGER(KIND=4)::kI_ind,kD_V_ind,kD_B_ind,kF_ind
+	INTEGER(KIND=4)::kD_ind_ref
 	INTEGER(KIND=4)::triad_count
 	INTEGER(KIND=4)::triad_deleted
 	INTEGER(KIND=4)::cfl_sys
+	INTEGER(KIND=4)::U_GRID,W_GRID
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::visc,diff,prandl_no
 	DOUBLE PRECISION::forcing_factor
@@ -87,7 +91,7 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::ds_rate_visc_V,ds_rate_diff_B
 	DOUBLE PRECISION::ds_rate_net_V,ds_rate_net_B
 	DOUBLE PRECISION::ds_rate_intr_V,ds_rate_intr_B
-	DOUBLE PRECISION::ds_rate_ref_V,ds_rate_forc
+	DOUBLE PRECISION::ds_rate_ref_V,ds_rate_forc,ds_rate_ref_B
 	DOUBLE PRECISION::skewness
 	DOUBLE PRECISION::skewness_const
 	DOUBLE PRECISION::er_V_self,er_B_self,er_VB
@@ -181,6 +185,7 @@ IMPLICIT  NONE
 		! LOCAL VARIABLES
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::time_min,visc_ref,diff_ref
+		INTEGER(KIND=4)::N_log_base
 		INTEGER(KIND=4)::N_ref,cfl_ref
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -193,160 +198,174 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                   = 3.0D0
-		dim_min_3                             = dim - thr
+		dim                                    = 3.0D0
+		dim_min_3                              = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
-		visc_status                           = 1
+		visc_status                            = 1
 		! '1' to include viscosity, '0' to do inviscid
 
-		diff_status                           = 1
+		diff_status                            = 1
 		! '1' to include diffusivity, '0' to do inviscid
 
-		forc_status                           = 1
+		forc_status                            = 1
 		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
 
-		coupling_status                       = 0
+		coupling_status                        = 0
 		! '1' for MHD EDQNM, '0' for only kinetic EDQNM, '2' for only MHD with fixed E(k)
 
-		N_ref                                 = 45
+		N_ref                                  = 45
 		! Reference resolution
+		kD_ind_ref                             = 37
+		! For k_max                            = 256, kD= 64, then changes according to viscosity
 
-		! visc_ref                            = 5E-4
-		visc_ref                              = 1E-3
-		! Viscosity standard (minimum) for N  =45
+		visc_ref                               = 5E-4
+		! Viscosity standard (minimum) for N   =45
 
-		wno_scale                             = two ** ( 0.25D0 )
+		wno_scale                              = two ** ( 0.25D0 )
 
-		visc                                  = visc_ref * ( wno_scale ** ( N_ref - N ) )
+		N_log_ref 														 = CEILING( ( DBLE(N) - one ) / 4.0D0 - 3.0D0 )
+		! k_max                                = 2^(N_log_ref), so for N=13, you get k_max=1
+
+		visc                                   = visc_ref * ( wno_scale ** ( N_ref - N ) )
+		visc                                   = U_GRID * visc
 		! Adjusted minimum viscosity for the current N
 
-		! visc                                = 0.001
+		! visc                                 = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                              = 1E-3
+		diff_ref                               = 5E-4
 		! Reference diffusivity
 
-		diff                                  = diff_ref * ( wno_scale ** ( N_ref - N ) )
+		diff                                   = diff_ref * ( wno_scale ** ( N_ref - N ) )
+		diff                                   = W_GRID * diff
 		! Adjusted minimum diffusivity for the current N
 
-		! diff                                = 0.02D0
+		! diff                                 = 0.02D0
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		prandl_no															= visc / diff
+		prandl_no															 = visc / diff
 		! Prandl number
 
-		energy_0 															= one
-		energy_V_0                            = 0.99999D0
-		energy_V_prev                         = energy_V_0
+		energy_0 															 = one
+		energy_B_0                             = 1E-4
+		energy_V_0                             = energy_0 - energy_B_0
+		energy_V_prev                          = energy_V_0
 		! Initial kinetic energy
-
-		energy_B_0                            = 0.00001D0
 		! Initial magnetic energy
 
-		forcing_factor												= 0.2D0
+		forcing_factor												 = 0.2D0
 		! Initial forcing value constant
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R U M A N D T I M E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		wno_scale_log                         = DLOG( wno_scale )
+		wno_scale_log                          = DLOG( wno_scale )
 		! Ratio of consecutive shells
 
-		wno_base                              = two ** ( - thr )
+		wno_base                               = two ** ( - thr )
 		! Base wavenumber
 
-		wno_min                               = wno_base
+		wno_min                                = wno_base
 		! Min wave number
 
-		wno_max                               = wno_base * ( wno_scale ** ( N - 1) )
+		wno_max                                = wno_base * ( wno_scale ** ( N - 1) )
 		! Max wave number
 
-		kI_ind                                = 2
+		kI_ind                                 = 9
 		! Index (position) of integral scale
 
-		kF_ind                                = 2
+		kF_ind                                 = 9
 		! Index (position) of forcing scale
 
-		kD_ind                                = 3 * FLOOR( N / 5.0D0 )
+		wno_diss_ref                           = 64.0D0
+		kD_ind_ref                             = FLOOR( DLOG( wno_diss_ref / wno_base ) / wno_scale_log ) + 1
+		wno_diss_V                             = wno_diss_ref * ( visc / visc_ref ) ** (-3.0D0/4.0D0)
+		kD_V_ind                               = FLOOR( DLOG( wno_diss_V / wno_base ) / wno_scale_log ) + 1
+		wno_diss_B                             = wno_diss_ref * ( visc / visc_ref ) ** (-3.0D0/4.0D0)
+		kD_B_ind                               = FLOOR( DLOG( wno_diss_B / wno_base ) / wno_scale_log ) + 1
 		! Index (position) of dissipation scale
 
-		ds_rate_ref_V                         = one
-		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
+		ds_rate_ref_V                          = ( wno_diss_V ** 4.0D0 ) * ( visc ** thr )
+		ds_rate_ref_B                          = ( wno_diss_B ** 4.0D0 ) * ( diff ** thr )
+		! REF-> compute_forcing_spectrum in <<< system_basicfunctions >>>
 
-		fback_coef                            = 0.2D0
-		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
+		fback_coef                             = 0.2D0
+		! REF-> compute_forcing_spectrum in <<< system_basicfunctions >>>
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
-		time_rms_V                            = one / DSQRT( energy_V_0 * ( wno_max ** two ) )
-		time_rms_B                            = one / DSQRT( energy_B_0 * ( wno_max ** two ) )
+		time_rms_V                             = one / DSQRT( energy_V_0 * ( wno_max ** two ) )
+		time_rms_B                             = one / DSQRT( energy_B_0 * ( wno_max ** two ) )
 		! Time scale from energy and largest momentum
 
-		time_visc                             = one / ( visc * ( wno_max ** two ) + tol_float )
-		time_diff                             = one / ( diff * ( wno_max ** two ) + tol_float )
+		time_visc                              = one / ( visc * ( wno_max ** two ) + tol_float )
+		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                               = 20
+		cfl_ref                                = 10
 		! Minimum of CFL
 
-		time_min                              = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
+		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
 
-		dt_max                                = time_min / DBLE( cfl_ref )
+		dt_max                                 = time_min / DBLE( cfl_ref )
 		! Maximum time step to satisfy the CFL condition.
 
 		CALL find_time_step( dt_max, dt )
 		! REF-> <<< system_auxilaries >>>
 
-		! dt                                  = 0.005
+		! dt                                   = 0.005
 		! UNCOMMENT TO GIVE CUSTOM 'dt'
 
-		cfl_sys                               = FLOOR( time_min / dt )
+		cfl_sys                                = FLOOR( time_min / dt )
 		! Actual CFL of the system
 
 		CALL time_to_step_convert( time_total, t_step_total, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_save                           = t_step_total / no_of_saves
+		t_step_save                            = t_step_total / no_of_saves
 		! Determines how many time steps after the save has to be made.
 
-		no_of_debug                           = 10
+		no_of_debug                            = 5
 		! No of times the data checked for any NaN
 
-		t_step_debug                          = t_step_total / no_of_debug
+		t_step_debug                           = t_step_total / no_of_debug
 		! No of times, the data will be checked for 'NaN' during the simul
 
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                           = FLOOR( t_step_total / 4.0D0 )
+		t_step_jump                            = FLOOR( t_step_total / 2.0D0 )
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
 
 		WRITE (dim_char, f_d5p2) dim
-		! converting dimension to CHARACTER
+		! converting dimension to CHARACTERk
 
-		kol_const                             = 1.7D0
-		alfven_const                          = DSQRT( two / thr )
-		eddy_const                            = 0.36D0
-		! eddy_const                            = 0.19D0 * DSQRT( ( kol_const ) ** thr )
+		WRITE (U_char, f_i4) U_GRID
+		WRITE (W_char, f_i4) W_GRID
+		! converting viscosity and diffusivity
 
-		skewness_const                        = DSQRT(135.0D0/98.0D0)
+		kol_const                              = 1.72D0
+		alfven_const                           = DSQRT( two / thr )
+		eddy_const                             = 0.49D0
+
+		skewness_const                         = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness
 
-		dim_const                             = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
+		dim_const                              = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
 		! REF-> <<< system_auxilaries >>>
 		! Const of integration in 'd' dimension for the transfer term
 
-		sim_status                            = 0
+		sim_status                             = 0
 		! This being the first variable to start the simulation. At last, it will be set to '1'
 
-		sys_status                            = 0
+		sys_status                             = 0
 		! Checking the parameters of system, after pre_analysis subroutine it will be set to '1'
 
-		nan_count                             = 0
-		nan_status                            = 0
+		nan_count                              = 0
+		nan_status                             = 0
 		! No of NaN count and status of NaN (if any)
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -403,9 +422,6 @@ IMPLICIT  NONE
 		wno_int                               = wno( kI_ind )
 		! Wavenumber of forcing scale
 
-		wno_diss                              = wno( kD_ind )
-		! Wavenumber of dissipation scale
-
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  F  O  R  C  I  N  G       T  E  M  P  L  A  T  E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -422,7 +438,7 @@ IMPLICIT  NONE
 		! specK = ( wno ** s_exp ) * DEXP( -  wno * dum )
 		! specK = spec0 / SUM( spec0 * wno_band )
 
-		specK = DEXP( - ( ( wno - wno_diss ) / wno_base ) ** two )
+		specK = DEXP( - ( ( wno - wno_diss_V ) / wno_base ) ** two )
 		specK = specK / SUM( specK * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 

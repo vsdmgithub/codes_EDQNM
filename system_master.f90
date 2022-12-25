@@ -49,7 +49,10 @@ CHARACTER(LEN=5)::run
 	!  I  N  I  T  I  A  L  I  Z  A  T  I  O  N
 	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	CALL read_input
-	! REF-> <<< system_basicvariables >>>
+	! REF-> <<< system_basicvarables >>>
+
+	U_GRID=X
+	W_GRID=Y
 
 	CALL init_global_variables
 	! REF-> <<< system_basicvariables >>>

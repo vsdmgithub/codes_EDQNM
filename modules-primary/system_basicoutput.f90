@@ -95,7 +95,7 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'DYN_N' // TRIM( ADJUSTL( N_char ) ) // '_d' // TRIM( ADJUSTL( dim_char ) ) // '/'
+		type_sim    =  'DYN_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! type of simulation, the data is storing
 
 		CALL get_simulation_name(name_sim)
@@ -198,13 +198,16 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
-		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial mag.energy ',            '= ',energy_B_0
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Diss. wavenumber  ',             '= ',wno( kD_ind )
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
+		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
@@ -236,13 +239,16 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
-		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial mag.energy ',            '= ',energy_B_0
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Diss. wavenumber  ',             '= ',wno( kD_ind )
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
+		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count

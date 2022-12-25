@@ -399,9 +399,7 @@ MODULE system_basicfunctions
 		forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B ) * ( ( 1 - ( energy_tot - energy_0 ) ) ** two )
 		DO k_ind = 1, N
 			fr_spec( k_ind ) = forcing_factor * spec0( k_ind )
-			! fr_spec( k_ind ) = forcing_factor * specK( k_ind )
 		END DO
-		! fr_spec( 1 ) = forcing_factor / wno_band( 1 )
 
 		! 2. Injected linear to energy spectrum using integrating factor
 		! turn on the fback_coef to keep constant energy

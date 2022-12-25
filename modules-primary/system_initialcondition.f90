@@ -139,7 +139,7 @@ MODULE system_initialcondition
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		s_exp     = 2.0D0 ! Integral scale spectrum exponent
-		dum       = hf / ( wno_diss** two )
+		dum       = hf / ( wno_diss_B** two )
 		spec_B    = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
 		spec_B    = spec0 / SUM( spec_B * wno_band )
 		en_spec_B = energy_B_0 * spec_B
