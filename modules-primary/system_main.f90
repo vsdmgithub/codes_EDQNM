@@ -75,14 +75,16 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
+			! CALL IC_V_kolmo
 			CALL IC_V_large_eddies
+			! CALL IC_V_equipartition
 			! CALL IC_V_read_from_file
 			! en_spec_V = zero
 			! REF-> <<< system_initialcondition >>>
 
 			IF ( coupling_status .NE. 0 ) THEN
-				CALL IC_B_large_eddies_single_mode
-				! CALL IC_B_large_eddies
+				! CALL IC_B_large_eddies_single_mode
+				CALL IC_B_large_eddies
 				! CALL IC_B_small_eddies
 				! REF-> <<< system_initialcondition >>>
 			END IF
@@ -126,7 +128,7 @@ MODULE system_main
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
-		GOTO 922
+		! GOTO 922
 
 		DO t_step = 0, t_step_total
 
@@ -149,6 +151,12 @@ MODULE system_main
 				CALL print_error_nan
 				! REF-> <<< system_basicoutput >>>
 				EXIT ! Meaning 'NaN' is encountered during the Debug
+
+			END IF
+
+			IF ( t_step .GT. t_step_jump ) THEN ! Helps get out the loop in the middle
+
+				EXIT
 
 			END IF
 
@@ -225,6 +233,9 @@ MODULE system_main
 				CALL compute_transfer_term_B
 				! REF-> <<< system_solver >>>
 
+				CALL dynamo_rate_calc
+				! REF-> <<< system_solver >>>
+
 				CALL compute_magnetic_spectral_data
 				! REF-> <<< system_basicfunctions >>>
 
@@ -232,15 +243,15 @@ MODULE system_main
 
 		END IF
 
-		CALL compute_temporal_data
-		! REF-> <<< system_basicfunctions >>>
-
 		IF ( forc_status .EQ. 1 ) THEN
 
 			CALL compute_forcing_spectrum
 			! REF-> <<< system_basicfunctions >>>
 
 		END IF
+
+		CALL compute_temporal_data
+		! REF-> <<< system_basicfunctions >>>
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  D  E  B  U  G         F  O  R          N  a   N

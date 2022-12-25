@@ -95,7 +95,7 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'MHD_N' // TRIM( ADJUSTL( N_char ) ) // '_d' // TRIM( ADJUSTL( dim_char ) ) // '/'
+		type_sim    =  'DYN_N' // TRIM( ADJUSTL( N_char ) ) // '_d' // TRIM( ADJUSTL( dim_char ) ) // '/'
 		! type of simulation, the data is storing
 
 		CALL get_simulation_name(name_sim)
@@ -374,8 +374,9 @@ MODULE system_basicoutput
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_V( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_V( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes') laplacian_k( k_ind ) * en_spec_V( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_self( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_intr( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'yes')fl_spec_V( k_ind )
 
 		END DO
 
@@ -408,8 +409,10 @@ MODULE system_basicoutput
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes') laplacian_k( k_ind ) * en_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_self( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')dyn_rate_spec( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'yes')fl_spec_B( k_ind )
 
 		END DO
 
@@ -445,12 +448,16 @@ MODULE system_basicoutput
 		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_V
 
 		IF ( visc_status .EQ. 1 ) THEN
-			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate_V
+			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate_visc_V
 		END IF
 
-		WRITE(4004,f_d32p17,ADVANCE ='no')  enstrophy_V
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_intr_V
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V
+		IF ( forc_status .EQ. 1 ) THEN
+			WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_forc
+		END IF
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V + ds_rate_net_B
 		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_tot
-
 		WRITE(4004,f_d32p17,ADVANCE ='yes') skewness
 
 		IF ( t_step .EQ. t_step_total ) THEN
@@ -488,10 +495,13 @@ MODULE system_basicoutput
 		WRITE(4005,f_d32p17,ADVANCE ='no')  energy_B
 
 		IF ( diff_status .EQ. 1 ) THEN
-			WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_B
+			WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_diff_B
 		END IF
+		WRITE(4005,f_d32p17,ADVANCE ='no')  ds_rate_intr_B
+		WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_net_B
+		WRITE(4005,f_d32p17,ADVANCE ='no')  dynamo_exp_calc
+		WRITE(4005,f_d32p17,ADVANCE ='yes')  dynamo_exp
 
-		WRITE(4005,f_d32p17,ADVANCE ='yes')  enstrophy_B
 
 		IF ( t_step .EQ. t_step_total ) THEN
 			CLOSE(4005)

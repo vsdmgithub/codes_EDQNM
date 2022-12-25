@@ -56,7 +56,7 @@ IMPLICIT  NONE
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	INTEGER (KIND=4)::t_step,t_step_total
 	INTEGER (KIND=4)::t_step_save
-	INTEGER (KIND=4)::t_step_debug
+	INTEGER (KIND=4)::t_step_debug,t_step_jump
 	INTEGER (KIND=4)::no_of_saves,no_of_debug
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::time_total,time_now
@@ -80,11 +80,14 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::forcing_factor
 	DOUBLE PRECISION::energy_V_0,energy_B_0
 	DOUBLE PRECISION::energy_V,energy_B
+	DOUBLE PRECISION::energy_V_prev,energy_B_prev
 	DOUBLE PRECISION::energy_tot
-	DOUBLE PRECISION::energy_0
+	DOUBLE PRECISION::energy_0,dynamo_exp,dynamo_exp_calc
 	DOUBLE PRECISION::enstrophy_V,enstrophy_B
-	DOUBLE PRECISION::ds_rate_V,ds_rate_B
-	DOUBLE PRECISION::ds_rate_ref_V
+	DOUBLE PRECISION::ds_rate_visc_V,ds_rate_diff_B
+	DOUBLE PRECISION::ds_rate_net_V,ds_rate_net_B
+	DOUBLE PRECISION::ds_rate_intr_V,ds_rate_intr_B
+	DOUBLE PRECISION::ds_rate_ref_V,ds_rate_forc
 	DOUBLE PRECISION::skewness
 	DOUBLE PRECISION::skewness_const
 	DOUBLE PRECISION::er_V_self,er_B_self,er_VB
@@ -95,7 +98,9 @@ IMPLICIT  NONE
 	! SOLVER VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	DOUBLE PRECISION::eddy_const,alfven_const
-	DOUBLE PRECISION::integrand_V,integrand_B
+	DOUBLE PRECISION::integrand_V_intr,integrand_V_self
+	DOUBLE PRECISION::integrand_B_intr,integrand_B_self
+	DOUBLE PRECISION::dyn_rate_integrand
 	DOUBLE PRECISION::eddy_damping
 	! _________________________
 	! GLOBAL ARRAYS
@@ -105,7 +110,10 @@ IMPLICIT  NONE
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::laplacian_k
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_spec_V,tr_spec_V,fl_spec_V
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_spec_B,tr_spec_B,fl_spec_B
-	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::fr_spec,spec0
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::tr_spec_B_intr,tr_spec_B_self
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::tr_spec_V_intr,tr_spec_V_self
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::fr_spec,spec0,specK,dyn_rate_spec
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::integ_factor_B,integ_factor_V
 	! _________________________
 	! EDQNM ARRAYS
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -185,7 +193,7 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                   = thr
+		dim                                   = 3.0D0
 		dim_min_3                             = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
@@ -205,7 +213,7 @@ IMPLICIT  NONE
 		! Reference resolution
 
 		! visc_ref                            = 5E-4
-		visc_ref                              = 2E-3
+		visc_ref                              = 1E-3
 		! Viscosity standard (minimum) for N  =45
 
 		wno_scale                             = two ** ( 0.25D0 )
@@ -216,7 +224,7 @@ IMPLICIT  NONE
 		! visc                                = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                              = 2E-3
+		diff_ref                              = 1E-3
 		! Reference diffusivity
 
 		diff                                  = diff_ref * ( wno_scale ** ( N_ref - N ) )
@@ -229,11 +237,15 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															= one
-		energy_V_0                            = energy_0
+		energy_V_0                            = 0.99999D0
+		energy_V_prev                         = energy_V_0
 		! Initial kinetic energy
 
-		energy_B_0                            = 1E-3
+		energy_B_0                            = 0.00001D0
 		! Initial magnetic energy
+
+		forcing_factor												= 0.2D0
+		! Initial forcing value constant
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R U M A N D T I M E
@@ -251,19 +263,19 @@ IMPLICIT  NONE
 		wno_max                               = wno_base * ( wno_scale ** ( N - 1) )
 		! Max wave number
 
-		kI_ind                                = 4
+		kI_ind                                = 2
 		! Index (position) of integral scale
 
-		kF_ind                                = 4
+		kF_ind                                = 2
 		! Index (position) of forcing scale
 
-		kD_ind                                = N - 10
+		kD_ind                                = 3 * FLOOR( N / 5.0D0 )
 		! Index (position) of dissipation scale
 
 		ds_rate_ref_V                         = one
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 
-		fback_coef                            = zero
+		fback_coef                            = 0.2D0
 		! REF-> compute_forcing_spectrum in  <<< system_basicfunctions >>>
 		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
@@ -275,7 +287,7 @@ IMPLICIT  NONE
 		time_diff                             = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                               = 10
+		cfl_ref                               = 20
 		! Minimum of CFL
 
 		time_min                              = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -298,7 +310,7 @@ IMPLICIT  NONE
 		t_step_save                           = t_step_total / no_of_saves
 		! Determines how many time steps after the save has to be made.
 
-		no_of_debug                           = 5
+		no_of_debug                           = 10
 		! No of times the data checked for any NaN
 
 		t_step_debug                          = t_step_total / no_of_debug
@@ -306,6 +318,8 @@ IMPLICIT  NONE
 
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
+
+		t_step_jump                           = FLOOR( t_step_total / 4.0D0 )
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
@@ -399,6 +413,17 @@ IMPLICIT  NONE
 		dum   = hf / ( wno_int ** two )
 		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! K  0  L   M   O      T  E  M  P  L  A  T  E
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! s_exp = -5.0D0/3.0D0
+		! dum   = one / wno( FLOOR( DBLE(N) / 4.0D0 ) )
+		! specK = ( wno ** s_exp ) * DEXP( -  wno * dum )
+		! specK = spec0 / SUM( spec0 * wno_band )
+
+		specK = DEXP( - ( ( wno - wno_diss ) / wno_base ) ** two )
+		specK = specK / SUM( specK * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
@@ -422,9 +447,12 @@ IMPLICIT  NONE
 		ALLOCATE( wno( N ) , wno_band ( N ) )
 		ALLOCATE( wno_right( N ) , wno_left ( N ) )
 		ALLOCATE( laplacian_k( N ) )
-		ALLOCATE( spec0( N ), en_spec_V( N ), en_spec_B( N ) )
+		ALLOCATE( spec0( N ), specK( N ), en_spec_V( N ), en_spec_B( N ) )
 		ALLOCATE( tr_spec_V( N ), tr_spec_B( N ) )
+		ALLOCATE( tr_spec_V_self( N ), tr_spec_B_self( N ) )
+		ALLOCATE( tr_spec_V_intr( N ), tr_spec_B_intr( N ) )
 		ALLOCATE( fl_spec_V( N ), fl_spec_B( N ) )
+		ALLOCATE( dyn_rate_spec( N ) )
 		IF ( forc_status .EQ. 1 ) THEN
 			ALLOCATE( fr_spec( N ) )
 		END IF
@@ -449,8 +477,11 @@ IMPLICIT  NONE
 		DEALLOCATE( wno , wno_band )
 		DEALLOCATE( wno_right , wno_left  )
 		DEALLOCATE( laplacian_k )
-		DEALLOCATE( spec0, en_spec_V, en_spec_B )
+		DEALLOCATE( spec0, specK, en_spec_V, en_spec_B )
 		DEALLOCATE( tr_spec_V, tr_spec_B, fl_spec_V, fl_spec_B )
+		DEALLOCATE( tr_spec_V_intr, tr_spec_B_intr )
+		DEALLOCATE( tr_spec_V_self, tr_spec_B_self )
+		DEALLOCATE( dyn_rate_spec )
 		IF ( forc_status .EQ. 1 ) THEN
 			DEALLOCATE( fr_spec )
 		END IF

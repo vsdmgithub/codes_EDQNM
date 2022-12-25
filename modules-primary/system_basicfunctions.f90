@@ -320,7 +320,14 @@ MODULE system_basicfunctions
 		enstrophy_V  = SUM( laplacian_k * en_spec_V * wno_band )
 
 		IF ( visc_status .EQ. 1 ) THEN
-			ds_rate_V  = two * visc * enstrophy_V
+			ds_rate_visc_V = two * visc * enstrophy_V
+		END IF
+
+		ds_rate_net_V  = ( energy_V - energy_V_prev ) / dt
+		ds_rate_intr_V = SUM( tr_spec_V_intr * wno_band )
+
+		IF ( forc_status .EQ. 1 ) THEN
+			ds_rate_forc   = SUM( fr_spec * wno_band )
 		END IF
 
 		IF ( forc_status .EQ. 1 ) THEN
@@ -337,8 +344,13 @@ MODULE system_basicfunctions
 			enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
 
 			IF ( diff_status .EQ. 1 ) THEN
-				ds_rate_B  = two * diff * enstrophy_B
+				ds_rate_diff_B  = two * diff * enstrophy_B
 			END IF
+
+			ds_rate_net_B   = ( energy_B - energy_B_prev ) / dt
+			ds_rate_intr_B  = SUM( tr_spec_B_intr * wno_band )
+			dynamo_exp      = ds_rate_net_B / energy_B
+			dynamo_exp_calc = SUM( dyn_rate_spec * en_spec_B * wno_band ) / energy_B
 
 			CALL write_magnetic_temporal_data
 			! REF-> <<< system_basicoutput >>>
@@ -348,6 +360,9 @@ MODULE system_basicfunctions
 		energy_tot   = SUM( ( en_spec_V + en_spec_B ) * wno_band )
 		CALL write_kinetic_temporal_data
 		! REF-> <<< system_basicoutput >>>
+
+		energy_V_prev = energy_V
+		energy_B_prev = energy_B
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -375,25 +390,38 @@ MODULE system_basicfunctions
 		! TYPE OF FORCING
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-	 	! 1. Proportional to energy spectrum.
+		! 1. Injected as constant
 		! F(k)= f * E(k) for 0<k<kF_ind; f = ds_rate / 0_to_kF ind E(k)dk
 		! --------------------------------------------------------------------------
-		! forcing_factor = ds_rate_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
+		! forcing_factor = forcing_factor * ( ( 1 - ( energy_tot - energy_0 ) * fback_coef ) **0.25D0 )
+		! fact = 0.2, fdback=15 working for d=2
+
+		forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B ) * ( ( 1 - ( energy_tot - energy_0 ) ) ** two )
+		DO k_ind = 1, N
+			fr_spec( k_ind ) = forcing_factor * spec0( k_ind )
+			! fr_spec( k_ind ) = forcing_factor * specK( k_ind )
+		END DO
+		! fr_spec( 1 ) = forcing_factor / wno_band( 1 )
+
+		! 2. Injected linear to energy spectrum using integrating factor
+		! turn on the fback_coef to keep constant energy
+		! --------------------------------------------------------------------------
+		! ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
+		! ds_rate_ref_V  = - ( energy_V - energy_V_0 ) / dt
+		! ds_rate_ref_V  = ds_rate_visc_V - ds_rate_intr_V
+		! forcing_factor = ds_rate_ref_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
+		! fr_spec        = zero
 		! DO k_ind = 1, kF_ind
 		! 	fr_spec( k_ind ) = forcing_factor * en_spec_V( k_ind )
 		! END DO
+		! integ_factor_V = DEXP( (- two * visc * laplacian_k + forcing_factor ) * dt )
+		! energy_V_0     = energy_V
 
-		! 2. Constant forcing shape, with varying magnitude,
-		! turn on the fback_coef to keep constant energy
-		! F(k) = f0 A(k), where A(k) is peaked at kI_ind
+		! 3. Constant energy for certain modes
 		! --------------------------------------------------------------------------
-		ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
-		fr_spec       = ds_rate_ref_V * spec0
-
-		! 3. Constant forcing shape, with constant magnitude
-		! F(k) = f0 A(k), where A(k)
-		! --------------------------------------------------------------------------
-		! fr_spec       = ds_rate_ref_V * spec0
+		! DO k_ind = 1, kF_ind
+		! 	en_spec_V( k_ind ) = spec0( k_ind )
+		! END DO
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
@@ -415,11 +443,13 @@ MODULE system_basicfunctions
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		coupling_status = 1
-		energy_V_0      = energy_0 - energy_B_0
-		en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
+		! energy_V_0      = energy_0 - energy_B_0
+		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
+		energy_B_prev = energy_B_0
 
 		! CALL IC_B_large_eddies_single_mode
 		CALL IC_B_large_eddies
+		! CALL IC_B_equipartition
 		! REF-> <<< system_initialcondition >>>
 
 		CALL prepare_output_dynamo

@@ -124,14 +124,14 @@ MODULE system_advfunctions
 				IF ( min_max_ratio .LE. local_ratio ) THEN
 
 					flux_pos_nonlocal( k2_ind ) = flux_pos_nonlocal( k2_ind ) &
-					+ integrand_V * wno_band( k_ind )
+					+ ( integrand_V_self + integrand_V_intr ) * wno_band( k_ind )
 					! Summation terms over all possible k,q,p for a given k'
 					! in the region of nonlocal interactions.
 
 				END IF
 
 				flux_pos( k2_ind ) = flux_pos( k2_ind ) &
-				+ integrand_V * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
+				+ ( integrand_V_self + integrand_V_intr ) * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
 	    ! Summation terms over all possible k,q,p for a given k'.
 
 			END IF
@@ -167,14 +167,14 @@ MODULE system_advfunctions
 			IF ( min_max_ratio .LE. local_ratio ) THEN
 
 				flux_neg_nonlocal( k2_ind ) = flux_neg_nonlocal( k2_ind ) &
-				+ integrand_V * wno_band( k_ind )
+				+ ( integrand_V_self + integrand_V_intr ) * wno_band( k_ind )
 				! Summation terms over all possible k,q,p for a given k'
 				!  in the region of nonlocal interactions.
 
 			END IF
 
 			flux_neg( k2_ind ) = flux_neg( k2_ind ) &
-			+ integrand_V * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
+			+ ( integrand_V_self + integrand_V_intr ) * wno_band( k_ind ) * wno_band( q_ind ) * wno_band( p_ind )
 			! Summation terms over all possible k,q,p for a given k'.
 
 		END IF

@@ -53,6 +53,49 @@ MODULE system_initialcondition
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		en_spec_V = energy_V_0 * spec0
+		! en_spec_V =  spec0
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE IC_V_kolmo
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		en_spec_V = energy_V_0 * specK
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE IC_V_equipartition
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		DO k_ind = 1, N
+			en_spec_V( k_ind ) = wno( k_ind ) ** ( dim - one )
+		END DO
+
+		en_spec_V  = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
@@ -122,6 +165,29 @@ MODULE system_initialcondition
 		! en_spec_B( N-1 ) = energy_B_0 / wno_band( N-1 )
 		en_spec_B( kI_ind ) = energy_B_0 / wno_band( kI_ind )
 		! en_spec_B( kD_ind ) = energy_B_0 / wno_band( kD_ind )
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE IC_B_equipartition
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		DO k_ind = 1, N
+			en_spec_B( k_ind ) = wno( k_ind ) ** ( dim - one )
+		END DO
+
+		en_spec_B  = en_spec_B * ( energy_B_0 / SUM( en_spec_B * wno_band ) )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END

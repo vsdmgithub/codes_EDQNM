@@ -45,8 +45,6 @@ MODULE system_solver
 	DOUBLE PRECISION:: k_pq,p_kq
 	DOUBLE PRECISION:: E_V_k,E_V_p,E_V_q
 	DOUBLE PRECISION:: E_B_k,E_B_p,E_B_q
-	DOUBLE PRECISION:: integrand_V_intr,integrand_V_self
-	DOUBLE PRECISION:: integrand_B_intr,integrand_B_self
 	DOUBLE PRECISION:: lapl_freq,eddy_freq,alfven_freq
 	DOUBLE PRECISION:: alfven_k,alfven_p,alfven_q
 	DOUBLE PRECISION:: eddy_k,eddy_q,eddy_p
@@ -58,7 +56,6 @@ MODULE system_solver
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::dV_spec1, dV_spec2, dV_spec3, dV_spec4
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::dB_spec1, dB_spec2, dB_spec3, dB_spec4
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::spec_temp_V,spec_temp_B
-	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::integ_factor_B,integ_factor_V
 	! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 
 	CONTAINS
@@ -113,19 +110,6 @@ MODULE system_solver
 		IMPLICIT NONE
 		! First store the spectral velocity into a temporary matrix, as steps of RK4 algorithm will manipulate 'en_spec(k)''
 
-		DO dum_ind = 0, N
-			IF ( en_spec_V( dum_ind ) .LT. zero ) THEN
-				print*,"Kinetic spectrum got negative at k=",dum_ind
-				nan_status = 1
-				EXIT
-			END IF
-			IF ( en_spec_B( dum_ind ) .LT. zero ) THEN
-				print*,"Magnetic spectrum got negative at k=",dum_ind
-				nan_status = 1
-				EXIT
-			END IF
-		END DO
-
 		spec_temp_V = en_spec_V
 		spec_temp_B = en_spec_B
 
@@ -160,6 +144,21 @@ MODULE system_solver
 		ELSE
 			en_spec_V      =   spec_temp_V + ( dV_spec1 + two * dV_spec2 + two * dV_spec3 + dV_spec4 ) / six
 		END IF
+
+		DO dum_ind = 0, N
+			IF ( en_spec_V( dum_ind ) .LT. zero ) THEN
+				print*,"Kinetic spectrum got negative at k=",dum_ind
+				en_spec_V( dum_ind ) = spec_temp_V( dum_ind )
+				nan_status = 1
+				EXIT
+			END IF
+			IF ( en_spec_B( dum_ind ) .LT. zero ) THEN
+				print*,"Magnetic spectrum got negative at k=",dum_ind
+				en_spec_B( dum_ind ) = spec_temp_B( dum_ind )
+				nan_status = 1
+				EXIT
+			END IF
+		END DO
 
 	END
 	! </f>
@@ -256,7 +255,8 @@ MODULE system_solver
 		!   T   R   A   N   S   F   E   R       T   E   R   M
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		tr_spec_V   =   zero
+		tr_spec_V_self   =   zero
+		tr_spec_V_intr   =   zero
 		! Reseting the transfer term
 
 		DO k_ind = 1 , N
@@ -270,13 +270,18 @@ MODULE system_solver
 				GOTO 911
 			END IF
 
-			tr_spec_V( k_ind ) = tr_spec_V( k_ind ) + integrand_V
-			! Summation terms over all possible q,p for a given k.
+			tr_spec_V_self( k_ind ) = tr_spec_V_self( k_ind ) + integrand_V_self
+			IF ( coupling_status .GE. 1 ) THEN
+				tr_spec_V_intr( k_ind ) = tr_spec_V_intr( k_ind ) + integrand_V_intr
+				! Summation terms over all possible q,p for a given k.
+			END IF
 
-	END DO
-	END DO
-	END DO
-	911 CONTINUE
+		END DO
+		END DO
+		END DO
+
+		tr_spec_V = tr_spec_V_self + tr_spec_V_intr
+		911 CONTINUE
 
 	END
 ! </f>
@@ -348,6 +353,13 @@ MODULE system_solver
 			d_spec = dt * tr_spec_B
 			! The transfer term
 
+		! DO dum_ind = 0, N
+		! 	IF ( spec_temp_B( dum_ind ) .LT. 6.0D0 * d_spec( dum_ind ) ) THEN
+		! 		! print*,"Magnetic spectrum got negative at k=",dum_ind
+		! 		d_spec( dum_ind ) = zero
+		! 	END IF
+		! END DO
+
 	END
 	! </f>
 
@@ -364,7 +376,8 @@ MODULE system_solver
 		!   T   R   A   N   S   F   E   R       T   E   R   M
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		tr_spec_B   =   zero
+		tr_spec_B_self   =   zero
+		tr_spec_B_intr   =   zero
 		! Reseting the transfer term
 
 		DO k_ind = 1 , N
@@ -378,14 +391,17 @@ MODULE system_solver
 				GOTO 911
 			END IF
 
-			tr_spec_B( k_ind ) = tr_spec_B( k_ind ) + integrand_B
+			tr_spec_B_self( k_ind ) = tr_spec_B_self( k_ind ) + integrand_B_self
+			tr_spec_B_intr( k_ind ) = tr_spec_B_intr( k_ind ) + integrand_B_intr
 			! Summation terms over all possible q,p for a given k.
 
-	END DO
-	END DO
-	END DO
+		END DO
+		END DO
+		END DO
 
-	911 CONTINUE
+		tr_spec_B = tr_spec_B_self + tr_spec_B_intr
+		911 CONTINUE
+
 	END
 ! </f>
 
@@ -411,24 +427,23 @@ MODULE system_solver
 		E_B_p              = en_spec_B( p_ind )
 		E_B_q              = en_spec_B( q_ind )
 
-		integrand_V_self   = ( k_d * E_V_p - p_d * E_V_k ) * E_V_q
-		integrand_V_self   = eddy_damping_V * k_pq * geom_b( k_ind, q_ind, p_ind ) * integrand_V_self
+		integrand_V_self   = k_pq * geom_b( k_ind, q_ind, p_ind ) * ( k_d * E_V_p - p_d * E_V_k ) * E_V_q
+		integrand_V_self   = eddy_damping_V * triad_weightage( k_ind, q_ind, p_ind ) * integrand_V_self
+		integrand_V_self   = integrand_V_self * wno_band( q_ind ) * wno_band( p_ind )
+
 		integrand_V_intr   = zero
 
 		IF ( coupling_status .EQ. 1 ) THEN
-			! integrand_V_intr = + geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p * E_B_q ! Nonlinear term
-			! integrand_V_intr = - geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k * E_B_q ! Linear term
-			integrand_V_intr = ( geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p - geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k ) * E_B_q ! Full
-			integrand_V_intr = eddy_damping_Bk * k_pq * integrand_V_intr
+			! integrand_V_intr = + k_pq * geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p * E_B_q ! Nonlinear term
+			! integrand_V_intr = - k_pq * geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k * E_B_q ! Linear term
+			integrand_V_intr = k_pq * ( geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p - geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k ) * E_B_q ! Full
+			integrand_V_intr = eddy_damping_Bk * triad_weightage( k_ind, q_ind, p_ind ) *  integrand_V_intr
+			integrand_V_intr = integrand_V_intr * wno_band( q_ind ) * wno_band( p_ind )
 		END IF
 
-		integrand_V        = ( integrand_V_self + integrand_V_intr ) * triad_weightage( k_ind, q_ind, p_ind )
-		integrand_V        = integrand_V * wno_band( q_ind ) * wno_band( p_ind )
-
-		IF ( integrand_V .NE. integrand_V ) THEN
+		IF ( integrand_V_self .NE. integrand_V_self ) THEN
 			print*,"NaN here at V-transfer term calc at ",k_ind,q_ind,p_ind,&
-			triad_weightage(k_ind,q_ind, p_ind),eddy_damping,integrand_V_self,integrand_V_intr,integrand_V
-		print*,eddy_damping
+			triad_weightage(k_ind,q_ind, p_ind),eddy_damping,integrand_V_self,integrand_V_intr
 			nan_status=1
 		END IF
 
@@ -458,24 +473,62 @@ MODULE system_solver
 		E_B_q            = en_spec_B( q_ind )
 		E_B_k            = en_spec_B( k_ind )
 
-		integrand_B_self = zero
-		integrand_B_self = ( k_d * E_B_p - p_d * E_B_k ) * E_V_q
-		integrand_B_self = eddy_damping_Bq * k_pq * geom_h( k_ind, q_ind, p_ind ) * integrand_B_self
+		integrand_B_self = k_pq * geom_h( k_ind, q_ind, p_ind ) * ( k_d * E_B_p - p_d * E_B_k ) * E_V_q
+		integrand_B_self = eddy_damping_Bq * triad_weightage( k_ind, q_ind, p_ind ) * integrand_B_self
+		integrand_B_self = integrand_B_self * wno_band( q_ind ) * wno_band( p_ind )
 
-		integrand_B_intr = zero
-		! integrand_B_intr =  - p_d * E_B_k * E_B_q ! Nonlinear term
-		! integrand_B_intr = k_d * E_V_p * E_B_q !  Linear terms
-		integrand_B_intr = ( k_d * E_V_p - p_d * E_B_k ) * E_B_q ! Full
-		integrand_B_intr = eddy_damping_Bp * p_kq * geom_c( p_ind, q_ind, k_ind ) * integrand_B_intr
+		! integrand_B_intr = - p_kq * geom_c( p_ind, q_ind, k_ind ) * p_d * E_B_k * E_B_q  ! Nonlinear term
+		! integrand_B_intr = + p_kq * geom_c( p_ind, q_ind, k_ind ) * k_d * E_V_p * E_B_q  !  Linear terms
+		integrand_B_intr = p_kq * geom_c( p_ind, q_ind, k_ind ) * ( k_d * E_V_p - p_d * E_B_k ) * E_B_q ! Full
+		integrand_B_intr = eddy_damping_Bp * triad_weightage( k_ind, q_ind, p_ind ) * integrand_B_intr
+		integrand_B_intr = integrand_B_intr * wno_band( q_ind ) * wno_band( p_ind )
 
-		integrand_B      = ( integrand_B_self + integrand_B_intr ) * triad_weightage( k_ind, q_ind, p_ind )
-		integrand_B      = integrand_B * wno_band( q_ind ) * wno_band( p_ind )
-
-		IF (integrand_B .NE. integrand_B) THEN
+		IF (integrand_B_intr .NE. integrand_B_intr) THEN
 			print*,"NaN here at B-transfer term calc at ",k_ind,q_ind,p_ind,&
-			triad_weightage(k_ind,q_ind, p_ind),integrand_B_self,integrand_B_intr,integrand_B
+			triad_weightage(k_ind,q_ind, p_ind),integrand_B_self,integrand_B_intr
 			nan_status=1
 		END IF
+
+	END
+! </f>
+
+	SUBROUTINE dynamo_rate_calc
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the dynamo rate for each wno0
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  D Y N A M O   T E R M
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+		dyn_rate_spec   =   zero
+		! Reseting the  term
+
+		DO q_ind = 1 , N
+		DO k_ind = 1 , N
+		DO p_ind = p_ind_min( q_ind, k_ind ), p_ind_max( k_ind, q_ind )
+
+		CALL eddy_damping_factor
+		! Eddy damping term for the triad
+
+		k_d                    = wno( k_ind )**( dim - one )
+		p_kq                   = wno( p_ind ) / ( wno( k_ind ) * wno( q_ind ) )
+		E_V_p                  = en_spec_V( p_ind )
+
+		dyn_rate_integrand     = + p_kq * geom_c( p_ind, q_ind, k_ind ) * k_d * E_V_p
+		dyn_rate_integrand     = eddy_damping_Bp * triad_weightage( k_ind, q_ind, p_ind ) * dyn_rate_integrand
+		dyn_rate_integrand     = dyn_rate_integrand * wno_band( k_ind ) * wno_band( p_ind )
+
+		dyn_rate_spec( q_ind ) = dyn_rate_spec( q_ind ) + dyn_rate_integrand
+
+		END DO
+		END DO
+		END DO
 
 	END
 ! </f>
@@ -525,7 +578,7 @@ MODULE system_solver
 			print*,"NaN here at eddy damping calc ",k_ind,q_ind,p_ind,eddy_damping
 			nan_status=1
 		END IF
-		
+
 	END
 ! </f>
 
