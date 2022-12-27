@@ -170,6 +170,28 @@ MODULE system_initialcondition
 	END
 ! </f>
 
+	SUBROUTINE IC_B_copy_V
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with a single mode
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		DO k_ind = 1, N
+			en_spec_B( k_ind ) = en_spec_V( k_ind )
+		END DO
+
+		en_spec_B  = en_spec_B * ( energy_B_0 / SUM( en_spec_B * wno_band ) )
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
 	SUBROUTINE IC_B_equipartition
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -234,6 +256,52 @@ MODULE system_initialcondition
 
 		en_spec_V = A0 * en_spec_V
 		! UNCOMMENT TO NORMALIZE ENERGY
+
+		PRINT*,"IC READ SUCCESFULLY"
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+  SUBROUTINE IC_B_read_from_file
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition from a given data from a file
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! _________________________
+		! LOCAL  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		DOUBLE PRECISION::dum
+		CHARACTER(LEN=100)::spec0_address
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+		spec0_address='IC_B_N33'
+		! where initial condition is stored
+
+		OPEN( UNIT = 2001 ,FILE = TRIM(ADJUSTL(spec0_address))//'.dat' )
+
+		DO k_ind = 1, N
+
+			READ( 2001, '(F12.6)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='NO') en_spec_B( k_ind )
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='YES')  dum
+
+		END DO
+
+		CLOSE( 2001 )
+
+		en_spec_B = energy_B_0 * en_spec_B / SUM( en_spec_B * wno_band )
+		! Adjustng the normalization constant.
 
 		PRINT*,"IC READ SUCCESFULLY"
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

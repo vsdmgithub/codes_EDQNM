@@ -82,7 +82,9 @@ MODULE system_main
 			! en_spec_V = zero
 			! REF-> <<< system_initialcondition >>>
 
+			energy_B = energy_B_0
 			IF ( coupling_status .NE. 0 ) THEN
+				! CALL IC_B_copy_V
 				! CALL IC_B_large_eddies_single_mode
 				CALL IC_B_large_eddies
 				! CALL IC_B_small_eddies
@@ -209,7 +211,6 @@ MODULE system_main
 
 		CALL step_to_time_convert(t_step, time_now, dt)
 		! Converts the 't_step' to actual time 'time_now'
-
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  S  A  V  I  N  G    D  A  T  A
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -265,6 +266,8 @@ MODULE system_main
 			! REF-> <<< system_basicoutput >>>
 
 		END IF
+
+		time_factor    = DERF( 6 * energy_B / energy_V )
 
 	END
 ! </f>

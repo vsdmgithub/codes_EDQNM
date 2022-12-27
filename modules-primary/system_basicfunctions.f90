@@ -357,7 +357,7 @@ MODULE system_basicfunctions
 
 		END IF
 
-		energy_tot   = SUM( ( en_spec_V + en_spec_B ) * wno_band )
+		energy_tot   =  energy_V + energy_B
 		CALL write_kinetic_temporal_data
 		! REF-> <<< system_basicoutput >>>
 
@@ -441,12 +441,12 @@ MODULE system_basicfunctions
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		coupling_status = 1
-		! energy_V_0      = energy_0 - energy_B_0
-		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
-		energy_B_prev = energy_B_0
+		energy_B_prev   = energy_B_0
+		en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
 		! CALL IC_B_large_eddies_single_mode
 		CALL IC_B_large_eddies
+		! CALL IC_B_read_from_file
 		! CALL IC_B_equipartition
 		! REF-> <<< system_initialcondition >>>
 

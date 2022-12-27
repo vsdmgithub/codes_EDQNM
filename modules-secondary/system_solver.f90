@@ -45,9 +45,10 @@ MODULE system_solver
 	DOUBLE PRECISION:: k_pq,p_kq
 	DOUBLE PRECISION:: E_V_k,E_V_p,E_V_q
 	DOUBLE PRECISION:: E_B_k,E_B_p,E_B_q
-	DOUBLE PRECISION:: lapl_freq,eddy_freq,alfven_freq
+	DOUBLE PRECISION:: visc_freq,diff_freq,eddy_freq,alfven_freq
 	DOUBLE PRECISION:: alfven_k,alfven_p,alfven_q
-	DOUBLE PRECISION:: eddy_k,eddy_q,eddy_p
+	DOUBLE PRECISION:: eddy_V_k,eddy_V_q,eddy_V_p
+	DOUBLE PRECISION:: eddy_B_k,eddy_B_q,eddy_B_p
 	DOUBLE PRECISION:: eddy_damping_V,eddy_damping_Bk
 	DOUBLE PRECISION:: eddy_damping_Bq,eddy_damping_Bp
 	! _________________________
@@ -372,6 +373,7 @@ MODULE system_solver
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT NONE
+		DOUBLE PRECISION::dumI,dumS
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   T   R   A   N   S   F   E   R       T   E   R   M
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -399,8 +401,19 @@ MODULE system_solver
 		END DO
 		END DO
 
+		DO dum_ind = 0, N
+			dumS = dt * tr_spec_B_self( dum_ind )
+			dumI = dt * tr_spec_B_intr( dum_ind )
+			IF ( spec_temp_B( dum_ind ) + dumS + dumI .LT. zero ) then
+				print*,"Magnetic spectrum will become negative at k=",dum_ind,dumS,dumI,spec_temp_B(dum_ind)
+				print*,growth_factor
+		! 		d_spec( dum_ind ) = zero
+			END IF
+		END DO
+
 		tr_spec_B = tr_spec_B_self + tr_spec_B_intr
 		911 CONTINUE
+
 
 	END
 ! </f>
@@ -473,9 +486,12 @@ MODULE system_solver
 		E_B_q            = en_spec_B( q_ind )
 		E_B_k            = en_spec_B( k_ind )
 
+		! integrand_B_self = zero
 		integrand_B_self = k_pq * geom_h( k_ind, q_ind, p_ind ) * ( k_d * E_B_p - p_d * E_B_k ) * E_V_q
 		integrand_B_self = eddy_damping_Bq * triad_weightage( k_ind, q_ind, p_ind ) * integrand_B_self
+		! integrand_B_self = integrand_B_self * wno_band( q_ind ) * wno_band( p_ind )
 		integrand_B_self = integrand_B_self * wno_band( q_ind ) * wno_band( p_ind )
+		! integrand_B_intr = zero
 
 		! integrand_B_intr = - p_kq * geom_c( p_ind, q_ind, k_ind ) * p_d * E_B_k * E_B_q  ! Nonlinear term
 		! integrand_B_intr = + p_kq * geom_c( p_ind, q_ind, k_ind ) * k_d * E_V_p * E_B_q  !  Linear terms
@@ -545,34 +561,50 @@ MODULE system_solver
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		eddy_k            = DSQRT( DABS( SUM( ( en_spec_V(              : k_ind ) + en_spec_B( : k_ind ) ) *&
-		                                         laplacian_k(           : k_ind ) * wno_band(  : k_ind ) ) ) )
-		eddy_p            = DSQRT( DABS( SUM( ( en_spec_V(              : p_ind ) + en_spec_B( : p_ind ) ) *&
-		                                         laplacian_k(           : p_ind ) * wno_band(  : p_ind ) ) ) )
-		eddy_q            = DSQRT( DABS( SUM( ( en_spec_V(              : q_ind ) + en_spec_B( : q_ind ) ) *&
-		                                         laplacian_k(           : q_ind ) * wno_band(  : q_ind ) ) ) )
-		eddy_freq         = eddy_const * ( eddy_k + eddy_q + eddy_p )
+		eddy_V_k          = DSQRT( DABS( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+		eddy_V_p          = DSQRT( DABS( SUM( en_spec_V( :p_ind ) * laplacian_k( :p_ind ) * wno_band( :p_ind ) ) ) )
+		eddy_V_q          = DSQRT( DABS( SUM( en_spec_V( :q_ind ) * laplacian_k( :q_ind ) * wno_band( :q_ind ) ) ) )
+		eddy_freq         = eddy_const * ( eddy_V_k + eddy_V_q + eddy_V_p )
+		visc_freq         = visc * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
+		eddy_damping_V    = ( one - DEXP( - time_now * ( visc_freq + eddy_freq ) ) ) / ( visc_freq + eddy_freq )
 
-		IF ( coupling_status .EQ. 0 ) THEN
+		IF ( coupling_status .GT. 0 ) THEN
 
-			lapl_freq       = visc * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
-			eddy_damping_V  = one / ( lapl_freq + eddy_freq )
+			eddy_B_k        = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+			eddy_B_p        = DSQRT( DABS( SUM( en_spec_B( :p_ind ) * laplacian_k( :p_ind ) * wno_band( :p_ind ) ) ) )
+			eddy_B_q        = DSQRT( DABS( SUM( en_spec_B( :q_ind ) * laplacian_k( :q_ind ) * wno_band( :q_ind ) ) ) )
+			alfven_k        = wno( k_ind ) * DSQRT( DABS( SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ) ) ) )
+			alfven_p        = wno( p_ind ) * DSQRT( DABS( SUM( en_spec_B( :p_ind ) * wno_band( :p_ind ) ) ) )
+			alfven_q        = wno( q_ind ) * DSQRT( DABS( SUM( en_spec_B( :q_ind ) * wno_band( :q_ind ) ) ) )
 
-		ELSE
+			visc_freq       = visc * laplacian_k( k_ind )
+			diff_freq       = diff * ( laplacian_k( q_ind ) + laplacian_k( p_ind ) )
+			eddy_freq       = eddy_const * ( eddy_V_k + eddy_B_p + eddy_B_q )
+			alfven_freq     = alfven_const * ( alfven_p + alfven_q )
+			eddy_damping_Bk = ( one - DEXP( - time_now * ( visc_freq + diff_freq + eddy_freq + alfven_freq ) ) ) &
+			                   / ( visc_freq + diff_freq + eddy_freq + alfven_freq )
 
-			lapl_freq       = ( visc + diff ) * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) + laplacian_k( p_ind ) )
-			alfven_k        = wno( k_ind ) * DSQRT( DABS( SUM( en_spec_B( : k_ind ) * wno_band(  : k_ind ) ) ) )
-			alfven_p        = wno( p_ind ) * DSQRT( DABS( SUM( en_spec_B( : p_ind ) * wno_band(  : p_ind ) ) ) )
-			alfven_q        = wno( q_ind ) * DSQRT( DABS( SUM( en_spec_B( : q_ind ) * wno_band(  : q_ind ) ) ) )
-			alfven_freq     = alfven_const * ( alfven_k + alfven_p + alfven_q )
+			visc_freq       = visc * laplacian_k( p_ind )
+			diff_freq       = diff * ( laplacian_k( k_ind ) + laplacian_k( q_ind ) )
+			eddy_freq       = eddy_const * ( eddy_V_p + eddy_B_k + eddy_B_q )
+			alfven_freq     = alfven_const * ( alfven_k + alfven_q )
+			eddy_damping_Bp = ( one - DEXP( - time_now * ( visc_freq + diff_freq + eddy_freq + alfven_freq ) ) ) &
+			                   / ( visc_freq + diff_freq + eddy_freq + alfven_freq )
 
-			eddy_damping_V  = one / ( lapl_freq + eddy_freq + alfven_freq )
-			eddy_damping_Bk = eddy_damping_V
-			eddy_damping_Bp = eddy_damping_V
-			eddy_damping_Bq = eddy_damping_V
+			visc_freq       = visc * laplacian_k( q_ind )
+			diff_freq       = diff * ( laplacian_k( k_ind ) + laplacian_k( p_ind ) )
+			eddy_freq       = eddy_const * ( eddy_V_q + eddy_B_k + eddy_B_p )
+			alfven_freq     = alfven_const * ( alfven_k + alfven_p )
+			eddy_damping_Bq = ( one - DEXP( - time_now * ( visc_freq + diff_freq + eddy_freq + alfven_freq ) ) ) &
+			                   / ( visc_freq + diff_freq + eddy_freq + alfven_freq )
 
 		END IF
-		eddy_damping      = eddy_damping_V
+		eddy_damping      = 4.0D0 /( ( one / eddy_damping_V ) + ( one / eddy_damping_Bk ) + ( one / eddy_damping_Bp ) &
+		 												 + ( one / eddy_damping_Bq ) )
+		! eddy_damping_Bk   = eddy_damping
+		! eddy_damping_Bp   = eddy_damping
+		! eddy_damping_Bq   = eddy_damping
+		! eddy_damping_V    = eddy_damping
 
 		IF ( eddy_damping .NE. eddy_damping ) THEN
 			print*,"NaN here at eddy damping calc ",k_ind,q_ind,p_ind,eddy_damping

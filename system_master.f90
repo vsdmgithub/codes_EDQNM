@@ -51,8 +51,8 @@ CHARACTER(LEN=5)::run
 	CALL read_input
 	! REF-> <<< system_basicvarables >>>
 
-	U_GRID=X
-	W_GRID=Y
+	U_GRID=2
+	W_GRID=2
 
 	CALL init_global_variables
 	! REF-> <<< system_basicvariables >>>

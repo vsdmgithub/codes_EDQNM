@@ -66,6 +66,7 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::time_visc,time_rms_V
 	DOUBLE PRECISION::time_diff,time_rms_B
 	DOUBLE PRECISION::dt,dt_max
+	DOUBLE PRECISION:: time_factor
 	! _________________________
 	! SYSTEM VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -198,7 +199,7 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                    = 3.0D0
+		dim                                    = 2.0D0
 		dim_min_3                              = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
@@ -216,6 +217,7 @@ IMPLICIT  NONE
 
 		N_ref                                  = 45
 		! Reference resolution
+
 		kD_ind_ref                             = 37
 		! For k_max                            = 256, kD= 64, then changes according to viscosity
 
@@ -248,9 +250,10 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															 = one
-		energy_B_0                             = 1E-4
+		energy_B_0                             = 1E-6
 		energy_V_0                             = energy_0 - energy_B_0
 		energy_V_prev                          = energy_V_0
+		time_factor                            = DERF( 6 * energy_B_0 / energy_V_0 )
 		! Initial kinetic energy
 		! Initial magnetic energy
 
@@ -303,7 +306,7 @@ IMPLICIT  NONE
 		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                                = 10
+		cfl_ref                                = 15
 		! Minimum of CFL
 
 		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -428,6 +431,7 @@ IMPLICIT  NONE
 		s_exp = 2.0D0 ! Integral scale spectrum exponent
 		dum   = hf / ( wno_int ** two )
 		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
+		! spec0 = DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
