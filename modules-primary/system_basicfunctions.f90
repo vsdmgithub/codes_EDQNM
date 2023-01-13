@@ -233,6 +233,34 @@ MODULE system_basicfunctions
 	END
 ! </f>
 
+	SUBROUTINE compute_eddy_damping
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL this to get the damping factor for the third wnoent
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		DO k_ind = 1, N
+			eddy_V( k_ind ) = DSQRT( DABS( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+			eddy_V( k_ind ) = eddy_const * eddy_V( k_ind ) + visc * laplacian_k( k_ind )
+		END DO
+
+		IF ( coupling_status .GT. 0 ) THEN
+			DO k_ind = 1, N
+				eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+				eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
+				eddy_B( k_ind ) = eddy_B( k_ind ) + wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
+			END DO
+		END IF
+
+	END
+! </f>
+
 	SUBROUTINE compute_kinetic_spectral_data
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -559,8 +587,8 @@ MODULE system_basicfunctions
   END
 ! </f>
 
-! <f
 	INTEGER FUNCTION triangle_compatibility( i1, i2, i3 )
+! <f
 	! ------------
 	! FUNCTION TO: Calculate the compatibility that three momentum can form a triangle, 1 is yes, 0 means no.
 	! -------------

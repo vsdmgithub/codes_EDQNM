@@ -207,7 +207,7 @@ MODULE system_auxilaries
     END IF
 
     ! To have cutoff of type 'a * 10(-d)' with a=1,2,5.
-    IF ( t_fix .GT. 5 ) THEN
+    IF ( t_fix .GT. 5.0D0 ) THEN
 
         t_fix = 5.0D0 * ( 10.0D0 ** ( - dec ) )
 

@@ -91,6 +91,9 @@ MODULE system_main
 				! REF-> <<< system_initialcondition >>>
 			END IF
 
+			CALL compute_eddy_damping
+			! REF-> <<< system_basicfunctions >>>
+
 			CALL allocate_solver_arrays
 			! REF-> <<< system_solver >>>
 
@@ -140,12 +143,13 @@ MODULE system_main
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			IF ( coupling_status .EQ. 1 ) THEN
-				CALL rk4_algorithm
+				CALL ab4_algorithm
 			ELSE IF ( coupling_status .EQ. 0 ) THEN
 				CALL rk4_algorithm_V
 			ELSE IF ( coupling_status .EQ. 2 ) THEN
 				CALL rk4_algorithm_B
 			END IF
+			! REF-> <<< system_solver >>>
 			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
 
 			IF ( nan_status .EQ. 1 ) THEN
@@ -168,14 +172,19 @@ MODULE system_main
 		CALL prepare_perturbation_dynamo
 		! REF-> <<< system_basicfunctions >>>
 
-		DO t_step = 0, t_step_total
+		time_now = -dt
+		t_step   = 0
+		! DO t_step = 0, t_step_total
+		DO WHILE ( time_now .LT. time_total )
 
 			CALL inter_analysis
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			CALL rk4_algorithm
+			! CALL rk4_algorithm
+			CALL ab4_algorithm
+			! REF-> <<< system_solver >>>
 			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
 
 			IF ( nan_status .EQ. 1 ) THEN
@@ -186,6 +195,7 @@ MODULE system_main
 
 			END IF
 
+			t_step = t_step + 1
 		END DO
 		! ================================================================
 		!                    E     N     D
@@ -209,11 +219,17 @@ MODULE system_main
 
 		IMPLICIT NONE
 
-		CALL step_to_time_convert(t_step, time_now, dt)
+		! CALL step_to_time_convert(t_step, time_now, dt)
+		time_now = time_now + dt_cur
 		! Converts the 't_step' to actual time 'time_now'
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  S  A  V  I  N  G    D  A  T  A
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+		! IF ( coupling_status .NE. 0 ) THEN
+			! CALL compute_adaptive_time_step
+			! REF-> <<< system_solver_eqns >>>
+		! END IF
 
 		IF (MOD(t_step,t_step_save) .EQ. 0) THEN
 
@@ -221,7 +237,7 @@ MODULE system_main
 			WRITE (file_time,f_d8p4) time_now
 
 			CALL compute_transfer_term_V
-			! REF-> <<< system_solver >>>
+				! REF-> <<< system_solver_eqns >>>
 
 			CALL compute_kinetic_spectral_data
 			! REF-> <<< system_basicfunctions >>>
@@ -232,9 +248,9 @@ MODULE system_main
 			IF ( coupling_status .NE. 0 ) THEN
 
 				CALL compute_transfer_term_B
-				! REF-> <<< system_solver >>>
+				! REF-> <<< system_solver_eqns >>>
 
-				CALL dynamo_rate_calc
+				! CALL dynamo_rate_calc
 				! REF-> <<< system_solver >>>
 
 				CALL compute_magnetic_spectral_data
@@ -252,6 +268,9 @@ MODULE system_main
 		END IF
 
 		CALL compute_temporal_data
+		! REF-> <<< system_basicfunctions >>>
+
+		CALL compute_eddy_damping
 		! REF-> <<< system_basicfunctions >>>
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

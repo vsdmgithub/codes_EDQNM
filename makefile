@@ -14,6 +14,7 @@ basicvariables_mod   =modules-primary/system_basicvariables.f90
 basicoutput_mod      =modules-primary/system_basicoutput.f90
 initialcondition_mod =modules-primary/system_initialcondition.f90
 basicfunctions_mod   =modules-primary/system_basicfunctions.f90
+solvereqns_mod       =modules-secondary/system_solver_eqns.f90
 solver_mod           =modules-secondary/system_solver.f90
 advfunctions_mod     =modules-primary/system_advfunctions.f90
 main_mod             =modules-primary/system_main.f90
@@ -26,6 +27,7 @@ obj=system_timer.o\
 	system_basicoutput.o\
 	system_initialcondition.o\
 	system_basicfunctions.o\
+	system_solver_eqns.o\
 	system_solver.o\
 	system_advfunctions.o\
 	system_main.o
@@ -49,6 +51,7 @@ ex:$(ob)
 	$(cc) -c $(basicoutput_mod)
 	$(cc) -c $(initialcondition_mod)
 	$(cc) -c $(basicfunctions_mod)
+	$(cc) -c $(solvereqns_mod)
 	$(cc) -c $(solver_mod)
 	$(cc) -c $(advfunctions_mod)
 	$(cc) -c $(main_mod)

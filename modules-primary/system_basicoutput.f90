@@ -95,7 +95,7 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'DYN_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
+		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! type of simulation, the data is storing
 
 		CALL get_simulation_name(name_sim)

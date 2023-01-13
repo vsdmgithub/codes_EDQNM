@@ -65,7 +65,7 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::time_save
 	DOUBLE PRECISION::time_visc,time_rms_V
 	DOUBLE PRECISION::time_diff,time_rms_B
-	DOUBLE PRECISION::dt,dt_max
+	DOUBLE PRECISION::dt,dt_max,dt_cur
 	DOUBLE PRECISION:: time_factor
 	! _________________________
 	! SYSTEM VARIABLES
@@ -78,7 +78,7 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::kD_ind_ref
 	INTEGER(KIND=4)::triad_count
 	INTEGER(KIND=4)::triad_deleted
-	INTEGER(KIND=4)::cfl_sys
+	INTEGER(KIND=4)::cfl_sys,cfl_ref,cfl_cur
 	INTEGER(KIND=4)::U_GRID,W_GRID
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::visc,diff,prandl_no
@@ -96,23 +96,22 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::skewness
 	DOUBLE PRECISION::skewness_const
 	DOUBLE PRECISION::er_V_self,er_B_self,er_VB
-	DOUBLE PRECISION::dim_const
-	DOUBLE PRECISION::kol_const
-	DOUBLE PRECISION::fback_coef
 	! _________________________
 	! SOLVER VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	DOUBLE PRECISION::fback_coef
+	DOUBLE PRECISION::dim_const,kol_const
 	DOUBLE PRECISION::eddy_const,alfven_const
 	DOUBLE PRECISION::integrand_V_intr,integrand_V_self
 	DOUBLE PRECISION::integrand_B_intr,integrand_B_self
 	DOUBLE PRECISION::dyn_rate_integrand
-	DOUBLE PRECISION::eddy_damping
 	! _________________________
 	! GLOBAL ARRAYS
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::wno, wno_band
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::wno_right, wno_left
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::laplacian_k
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::eddy_B,eddy_V
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_spec_V,tr_spec_V,fl_spec_V
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_spec_B,tr_spec_B,fl_spec_B
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::tr_spec_B_intr,tr_spec_B_self
@@ -187,7 +186,7 @@ IMPLICIT  NONE
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::time_min,visc_ref,diff_ref
 		INTEGER(KIND=4)::N_log_base
-		INTEGER(KIND=4)::N_ref,cfl_ref
+		INTEGER(KIND=4)::N_ref
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! NOTES:
@@ -250,7 +249,7 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															 = one
-		energy_B_0                             = 1E-6
+		energy_B_0                             = 1E-8
 		energy_V_0                             = energy_0 - energy_B_0
 		energy_V_prev                          = energy_V_0
 		time_factor                            = DERF( 6 * energy_B_0 / energy_V_0 )
@@ -306,7 +305,7 @@ IMPLICIT  NONE
 		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                                = 15
+		cfl_ref                                = 20
 		! Minimum of CFL
 
 		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -319,6 +318,9 @@ IMPLICIT  NONE
 
 		! dt                                   = 0.005
 		! UNCOMMENT TO GIVE CUSTOM 'dt'
+
+		dt_cur 																 = dt
+		time_now															 = - dt
 
 		cfl_sys                                = FLOOR( time_min / dt )
 		! Actual CFL of the system
@@ -338,7 +340,7 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                            = FLOOR( t_step_total / 2.0D0 )
+		t_step_jump                            = FLOOR( t_step_total / 1.0D0 )
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
@@ -468,6 +470,7 @@ IMPLICIT  NONE
 		ALLOCATE( wno_right( N ) , wno_left ( N ) )
 		ALLOCATE( laplacian_k( N ) )
 		ALLOCATE( spec0( N ), specK( N ), en_spec_V( N ), en_spec_B( N ) )
+		ALLOCATE( eddy_V( N ), eddy_B( N ) )
 		ALLOCATE( tr_spec_V( N ), tr_spec_B( N ) )
 		ALLOCATE( tr_spec_V_self( N ), tr_spec_B_self( N ) )
 		ALLOCATE( tr_spec_V_intr( N ), tr_spec_B_intr( N ) )
@@ -498,6 +501,7 @@ IMPLICIT  NONE
 		DEALLOCATE( wno_right , wno_left  )
 		DEALLOCATE( laplacian_k )
 		DEALLOCATE( spec0, specK, en_spec_V, en_spec_B )
+		DEALLOCATE( eddy_V, eddy_B )
 		DEALLOCATE( tr_spec_V, tr_spec_B, fl_spec_V, fl_spec_B )
 		DEALLOCATE( tr_spec_V_intr, tr_spec_B_intr )
 		DEALLOCATE( tr_spec_V_self, tr_spec_B_self )
