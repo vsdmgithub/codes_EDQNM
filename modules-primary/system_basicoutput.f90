@@ -95,10 +95,12 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
+		type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
+		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! type of simulation, the data is storing
 
-		CALL get_simulation_name(name_sim)
+		name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
+		! CALL get_simulation_name(name_sim)
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
 
@@ -106,7 +108,7 @@ MODULE system_basicoutput
 		! Use this to give CUSTOM SIMULATION NAME
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
-		                 TRIM( ADJUSTL( name_sim ) ) // '/kinetic/'
+		                 TRIM( ADJUSTL( name_sim ) ) // '/kin/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
 
@@ -145,7 +147,7 @@ MODULE system_basicoutput
 		IMPLICIT  NONE
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
-		                 TRIM( ADJUSTL( name_sim ) ) // '/dynamo/'
+		                 TRIM( ADJUSTL( name_sim ) ) // '/dyn/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) )
@@ -194,12 +196,12 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
@@ -215,6 +217,7 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
+		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
 
 		CLOSE(233)
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -235,12 +238,12 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusive timescale  ',          '= ',time_diff
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K.Energy timescale  ',           '= ',time_rms_V
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' M.Energy timescale  ',           '= ',time_rms_B
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
 		WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
 		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
@@ -256,6 +259,7 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
+		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		file_name = TRIM( ADJUSTL( file_address ) ) // 'wavenumbers.dat'
@@ -417,8 +421,8 @@ MODULE system_basicoutput
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_self( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')dyn_rate_spec( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes')fl_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'yes')dyn_rate_spec( k_ind )
 
 		END DO
 

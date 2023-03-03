@@ -184,7 +184,7 @@ MODULE system_solver
 		IMPLICIT NONE
 		! First store the spectral velocity into a temporary matrix, as steps of RK4 algorithm will manipulate 'en_spec(k)''
 
-		
+
 		spec_temp_V = en_spec_V
 		spec_temp_B = en_spec_B
 
@@ -308,18 +308,30 @@ MODULE system_solver
 
 		END IF
 
-		DO dum_ind = 0, N
+		DO dum_ind = 0, kD_V_ind
 			IF ( en_spec_V( dum_ind ) .LT. zero ) THEN
 				print*,"Kinetic spectrum got negative at k=",dum_ind
 				en_spec_V( dum_ind ) = spec_temp_V( dum_ind )
 				nan_status = 1
 				EXIT
 			END IF
+		END DO
+		DO dum_ind = kD_V_ind, N
+			IF ( en_spec_V( dum_ind ) .LT. zero ) THEN
+				en_spec_V( dum_ind ) = spec_temp_V( dum_ind )
+			END IF
+		END DO
+		DO dum_ind = 0, kD_B_ind
 			IF ( en_spec_B( dum_ind ) .LT. zero ) THEN
 				print*,"Magnetic spectrum got negative at k=",dum_ind
 				en_spec_B( dum_ind ) = spec_temp_B( dum_ind )
 				nan_status = 1
 				EXIT
+			END IF
+		END DO
+		DO dum_ind = kD_B_ind, N
+			IF ( en_spec_B( dum_ind ) .LT. zero ) THEN
+				en_spec_B( dum_ind ) = spec_temp_B( dum_ind )
 			END IF
 		END DO
 

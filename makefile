@@ -4,7 +4,7 @@
 cc=gfortran
 
 # PROGRAM
-program=system_master.f90
+program=code_EDQNM.f90
 
 # MODULES
 timer_mod            =modules-secondary/system_timer.f90
@@ -55,9 +55,9 @@ ex:$(ob)
 	$(cc) -c $(solver_mod)
 	$(cc) -c $(advfunctions_mod)
 	$(cc) -c $(main_mod)
-	$(cc) $(program) $(obj) -o ex
+	$(cc) $(program) $(obj) -o ex_DIM_GHD
 	$(mkcl)
-	$(run)
+	# $(run)
 
 #----------------------------end-------
 

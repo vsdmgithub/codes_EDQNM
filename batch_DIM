@@ -1,0 +1,17 @@
+# !/bin/bash
+dim_list=("200" "201" "203" "205" "207" "210" "215" "220" "230" "240" "250" \
+"275" "300" "350" "400" "450" "500" "550" "600" "700" "800")
+for i in ${dim_list[@]}
+do
+	old="GHD"
+	new=$i
+	echo $new
+	sed -i "s/$old/$new/g" code_EDQNM.f90
+	sed -i "s/$old/$new/g" makefile
+	make
+	sed -i "s/$new/$old/g" code_EDQNM.f90
+	sed -i "s/$new/$old/g" makefile
+	cp run_DIM.sub run_DIM_$i.sub
+	sed -i "s/$old/$new/g" run_DIM_$i.sub
+done
+# #=================================================

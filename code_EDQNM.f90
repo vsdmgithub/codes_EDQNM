@@ -11,8 +11,7 @@
 ! ---------   ----------  ----------  /            \  |      \|
 ! --------------------------------------------------------------
 ! #########################
-! PROGRAM NAME : EDQNM d-dim
-! LAST MODIFIED: 15 NOV 2022
+! PROGRAM NAME : EDQNM-MHD d-dim
 ! _____________________________________
 ! #########################
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -24,6 +23,7 @@ PROGRAM EDQNM
 ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ! ------------
 ! * This program solves the 'd' dimensional EDQNM equation, refer Orsag 1970.
+! * Also the MHD-model based on the EDQNM model.
 ! * It is equipped to solve in 'd' dimension, where 'd' is a parameter that can be specified.
 ! * Other inputs involve, total energy, initial condition and viscosity.
 ! * The system is solved in 'N' wavenumbers, spaced logarithmically. Not recommended to change the spacing.
@@ -51,8 +51,14 @@ CHARACTER(LEN=5)::run
 	CALL read_input
 	! REF-> <<< system_basicvarables >>>
 
+	! For changing dimensions in batch scripts
+	DIM_D=GHD
 	U_GRID=2
 	W_GRID=2
+
+	! For changing prandl number in batch scripts
+	! U_GRID=XX
+	! W_GRID=YY
 
 	CALL init_global_variables
 	! REF-> <<< system_basicvariables >>>

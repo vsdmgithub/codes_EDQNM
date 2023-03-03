@@ -1,15 +1,15 @@
 #!/bin/bash
 
 # Job name
-#SBATCH --job-name=DZ_UX_WY
+#SBATCH --job-name=DIM_GHD
 #
 # Set partition
 #SBATCH --partition=long
 #
 # STDOUT file; "N" is node number and "j" job id number
-#SBATCH --output=DZ_UX_WY_%N_%j.out
+#SBATCH --output=DIM_GHD_%N_%j.out
 # STDERR file; "N" is node number and "j" job id number
-#SBATCH --error=DZ_UX_WY_%N_%j.err
+#SBATCH --error=DIM_GHD_%N_%j.err
 #
 # Number of processes
 #SBATCH --ntasks=1
@@ -24,5 +24,5 @@
 ### SBATCH --mail-type=ALL
 
 date
-time ./DZ_UX_WY
+time ./ex_DIM_GHD
 date

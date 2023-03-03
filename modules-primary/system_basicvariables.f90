@@ -45,6 +45,7 @@ IMPLICIT  NONE
 	INTEGER (KIND=4)::N,N_log_ref
 	INTEGER (KIND=4)::k_ind,q_ind,p_ind
 	INTEGER (KIND=4)::k2_ind,dum_ind
+	INTEGER (KIND=4)::DIM_D
 	CHARACTER(LEN=60)::N_char,dim_char
 	CHARACTER(LEN=60)::U_char,W_char
 	! ---------------------------------------------------------
@@ -58,15 +59,15 @@ IMPLICIT  NONE
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	INTEGER (KIND=4)::t_step,t_step_total
 	INTEGER (KIND=4)::t_step_save
+	INTEGER (KIND=4)::save_ind,save_pointer
 	INTEGER (KIND=4)::t_step_debug,t_step_jump
 	INTEGER (KIND=4)::no_of_saves,no_of_debug
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::time_total,time_now
-	DOUBLE PRECISION::time_save
+	DOUBLE PRECISION::time_save,time_now_save
 	DOUBLE PRECISION::time_visc,time_rms_V
 	DOUBLE PRECISION::time_diff,time_rms_B
 	DOUBLE PRECISION::dt,dt_max,dt_cur
-	DOUBLE PRECISION:: time_factor
 	! _________________________
 	! SYSTEM VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -185,6 +186,7 @@ IMPLICIT  NONE
 		! LOCAL VARIABLES
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::time_min,visc_ref,diff_ref
+		DOUBLE PRECISION::cff_1,cff_2,cff_3,cff_4,cff_5
 		INTEGER(KIND=4)::N_log_base
 		INTEGER(KIND=4)::N_ref
 
@@ -198,7 +200,7 @@ IMPLICIT  NONE
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                    = 2.0D0
+		dim                                    = DBLE(DIM_D) / 100.0D0
 		dim_min_3                              = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
@@ -249,10 +251,9 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															 = one
-		energy_B_0                             = 1E-8
+		energy_B_0                             = 1E-3
 		energy_V_0                             = energy_0 - energy_B_0
 		energy_V_prev                          = energy_V_0
-		time_factor                            = DERF( 6 * energy_B_0 / energy_V_0 )
 		! Initial kinetic energy
 		! Initial magnetic energy
 
@@ -305,7 +306,7 @@ IMPLICIT  NONE
 		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                                = 20
+		cfl_ref                                = 10
 		! Minimum of CFL
 
 		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -340,12 +341,12 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                            = FLOOR( t_step_total / 1.0D0 )
+		t_step_jump                            = FLOOR( t_step_total / 2.0D0 )
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
 
-		WRITE (dim_char, f_d5p2) dim
+		WRITE (dim_char, f_i4) DIM_D
 		! converting dimension to CHARACTERk
 
 		WRITE (U_char, f_i4) U_GRID
@@ -354,12 +355,19 @@ IMPLICIT  NONE
 
 		kol_const                              = 1.72D0
 		alfven_const                           = DSQRT( two / thr )
-		eddy_const                             = 0.49D0
+		cff_1                                  = 5.56432696E-05
+		cff_2                                  =-2.92825995E-03
+		cff_3                                  = 5.06388864E-02
+		cff_4                                  =-3.81011909e-01
+		cff_5                                  =1.25204421e+00
+		eddy_const                             = cff_1*(dim**4.0D0)+cff_2*(dim**3.0D0)+cff_3*(dim**2.0D0)+cff_4*dim+cff_5
+		! eddy_const                           = 0.49D0 ! 0.36D0
 
 		skewness_const                         = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness
 
 		dim_const                              = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
+		dim_const                              = dim_const / ( ( dim - one ) ** two )
 		! REF-> <<< system_auxilaries >>>
 		! Const of integration in 'd' dimension for the transfer term
 

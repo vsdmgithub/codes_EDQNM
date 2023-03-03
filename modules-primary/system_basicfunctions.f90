@@ -254,7 +254,7 @@ MODULE system_basicfunctions
 			DO k_ind = 1, N
 				eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
 				eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
-				eddy_B( k_ind ) = eddy_B( k_ind ) + wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
+				eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
 			END DO
 		END IF
 

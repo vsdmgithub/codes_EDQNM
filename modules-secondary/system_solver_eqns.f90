@@ -304,14 +304,16 @@ MODULE system_solver_eqns
 		IMPLICIT  NONE
 		DOUBLE PRECISION::dt_cur_tem
 
+		CALL compute_transfer_term_B
+		
 		dt_cur     = dt
 		dt_cur_tem = dt
 		DO dum_ind = 1, N
-			IF ( DABS(tr_spec_B( dum_ind )) .GT. zero ) THEN
-				cfl_cur = en_spec_B( dum_ind ) / ( dt_cur * DABS( tr_spec_B( dum_ind ) ) )
-				IF ( cfl_cur .LE. cfl_sys ) THEN
+			IF ( tr_spec_B( dum_ind ) .LT. zero ) THEN ! Checks if the transfer term is sucking up energy
+				cfl_cur = en_spec_B( dum_ind ) / ( dt_cur * DABS( tr_spec_B( dum_ind ) ) ) ! Looks at the CFL based on the transfer term
+				IF ( cfl_cur .LE. cfl_sys ) THEN ! If it is too low, then the dt is adjusted
 					dt_cur_tem = en_spec_B( dum_ind ) / ( cfl_sys * DABS( tr_spec_B( dum_ind ) ) )
-					IF ( dt_cur_tem .LT. dt_cur ) THEN
+					IF ( dt_cur_tem .LT. dt_cur ) THEN ! The adjusted dt is continuously monitored to the lowest one
 						dt_cur = dt_cur_tem
 					END IF
 				END IF

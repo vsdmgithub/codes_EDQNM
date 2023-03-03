@@ -135,6 +135,8 @@ MODULE system_main
 
 		! GOTO 922
 
+		time_now = -dt
+		save_ind = 0
 		DO t_step = 0, t_step_total
 
 			CALL inter_analysis
@@ -169,15 +171,22 @@ MODULE system_main
 		END DO
 
 		922 CONTINUE
+
 		CALL prepare_perturbation_dynamo
 		! REF-> <<< system_basicfunctions >>>
 
 		time_now = -dt
 		t_step   = 0
+		save_ind = 0
 		! DO t_step = 0, t_step_total
 		DO WHILE ( time_now .LT. time_total )
 
 			CALL inter_analysis
+
+			IF ( coupling_status .NE. 0 ) THEN
+				CALL compute_adaptive_time_step
+				! REF-> <<< system_solver_eqns >>>
+			END IF
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
@@ -222,19 +231,19 @@ MODULE system_main
 		! CALL step_to_time_convert(t_step, time_now, dt)
 		time_now = time_now + dt_cur
 		! Converts the 't_step' to actual time 'time_now'
+
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  S  A  V  I  N  G    D  A  T  A
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-		! IF ( coupling_status .NE. 0 ) THEN
-			! CALL compute_adaptive_time_step
-			! REF-> <<< system_solver_eqns >>>
-		! END IF
+		! IF (MOD(t_step,t_step_save) .EQ. 0) THEN
+		save_pointer = CEILING( ( time_now + tol_double ) / time_save )
+		IF ( save_pointer .GT. save_ind ) THEN
 
-		IF (MOD(t_step,t_step_save) .EQ. 0) THEN
-
+			! WRITE (file_time,f_d8p4) time_now
+			WRITE (file_time,f_d8p4) save_ind * time_save
+			save_ind = save_ind + 1
 			! Writes 'time_now' as a CHARACTER
-			WRITE (file_time,f_d8p4) time_now
 
 			CALL compute_transfer_term_V
 				! REF-> <<< system_solver_eqns >>>
@@ -250,13 +259,16 @@ MODULE system_main
 				CALL compute_transfer_term_B
 				! REF-> <<< system_solver_eqns >>>
 
-				! CALL dynamo_rate_calc
-				! REF-> <<< system_solver >>>
+				CALL dynamo_rate_calc
+				! REF-> <<< system_solver_eqns >>>
 
 				CALL compute_magnetic_spectral_data
 				! REF-> <<< system_basicfunctions >>>
 
 			END IF
+
+			CALL compute_temporal_data
+			! REF-> <<< system_basicfunctions >>>
 
 		END IF
 
@@ -266,9 +278,6 @@ MODULE system_main
 			! REF-> <<< system_basicfunctions >>>
 
 		END IF
-
-		CALL compute_temporal_data
-		! REF-> <<< system_basicfunctions >>>
 
 		CALL compute_eddy_damping
 		! REF-> <<< system_basicfunctions >>>
@@ -281,12 +290,13 @@ MODULE system_main
 			CALL perform_debug
 			! REF-> <<< system_basicfunctions >>>
 
+			energy_V     = SUM( en_spec_V * wno_band )
+			energy_B     = SUM( en_spec_B * wno_band )
+			energy_tot   =  energy_V + energy_B
 			CALL print_running_status
 			! REF-> <<< system_basicoutput >>>
 
 		END IF
-
-		time_factor    = DERF( 6 * energy_B / energy_V )
 
 	END
 ! </f>
