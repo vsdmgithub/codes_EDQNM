@@ -86,7 +86,8 @@ MODULE system_main
 			IF ( coupling_status .NE. 0 ) THEN
 				! CALL IC_B_copy_V
 				! CALL IC_B_large_eddies_single_mode
-				CALL IC_B_large_eddies
+				! CALL IC_B_large_eddies
+				CALL IC_B_large_eddies_2
 				! CALL IC_B_small_eddies
 				! REF-> <<< system_initialcondition >>>
 			END IF
@@ -183,10 +184,10 @@ MODULE system_main
 
 			CALL inter_analysis
 
-			IF ( coupling_status .NE. 0 ) THEN
-				CALL compute_adaptive_time_step
-				! REF-> <<< system_solver_eqns >>>
-			END IF
+			! IF ( coupling_status .NE. 0 ) THEN
+			! 	CALL compute_adaptive_time_step
+			! 	! REF-> <<< system_solver_eqns >>>
+			! END IF
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
@@ -259,7 +260,7 @@ MODULE system_main
 				CALL compute_transfer_term_B
 				! REF-> <<< system_solver_eqns >>>
 
-				CALL dynamo_rate_calc
+				! CALL dynamo_rate_calc
 				! REF-> <<< system_solver_eqns >>>
 
 				CALL compute_magnetic_spectral_data

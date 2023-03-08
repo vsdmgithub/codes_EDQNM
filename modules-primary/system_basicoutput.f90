@@ -99,8 +99,8 @@ MODULE system_basicoutput
 		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! type of simulation, the data is storing
 
-		name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
-		! CALL get_simulation_name(name_sim)
+		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
+		CALL get_simulation_name(name_sim)
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
 
@@ -218,6 +218,7 @@ MODULE system_basicoutput
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 
 		CLOSE(233)
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -260,6 +261,7 @@ MODULE system_basicoutput
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		file_name = TRIM( ADJUSTL( file_address ) ) // 'wavenumbers.dat'
@@ -384,9 +386,18 @@ MODULE system_basicoutput
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_V( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_self( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_intr( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes')fl_spec_V( k_ind )
+			IF ( coupling_status .NE. 0 ) THEN
+				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_self( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_intr( k_ind )
+			END IF
+			IF ( visc_status .EQ. 1 ) THEN
+				WRITE(882,f_d32p17,ADVANCE = 'no')visc * laplacian_k( k_ind ) * en_spec_V( k_ind )
+			END IF
+			IF ( forc_status .EQ. 1 ) THEN
+				WRITE(882,f_d32p17,ADVANCE = 'yes')fr_spec( k_ind )
+			ELSE
+				WRITE(882,f_d32p17,ADVANCE = 'yes')zero
+			END IF
 
 		END DO
 
@@ -420,9 +431,13 @@ MODULE system_basicoutput
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_self( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
-			WRITE(882,f_d32p17,ADVANCE = 'yes')dyn_rate_spec( k_ind )
+			IF ( diff_status .EQ. 1 ) THEN
+				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'yes')diff * laplacian_k( k_ind ) * en_spec_B( k_ind )
+			ELSE
+				WRITE(882,f_d32p17,ADVANCE = 'yes')tr_spec_B_intr( k_ind )
+			END IF
+			! WRITE(882,f_d32p17,ADVANCE = 'yes')dyn_rate_spec( k_ind )
 
 		END DO
 
@@ -456,16 +471,15 @@ MODULE system_basicoutput
 
 		WRITE(4004,f_d8p4,ADVANCE   ='no')  time_now
 		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_V
-
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_self_V
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_intr_V
 		IF ( visc_status .EQ. 1 ) THEN
 			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate_visc_V
 		END IF
-
-		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_intr_V
-		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V
 		IF ( forc_status .EQ. 1 ) THEN
-			WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_forc
+			WRITE(4004,f_d32p17,ADVANCE ='no') ds_rate_forc
 		END IF
+		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V
 		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V + ds_rate_net_B
 		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_tot
 		WRITE(4004,f_d32p17,ADVANCE ='yes') skewness
@@ -503,15 +517,14 @@ MODULE system_basicoutput
 
 		WRITE(4005,f_d8p4,ADVANCE   ='no')  time_now
 		WRITE(4005,f_d32p17,ADVANCE ='no')  energy_B
-
+		WRITE(4005,f_d32p17,ADVANCE ='no')  ds_rate_self_B
+		WRITE(4005,f_d32p17,ADVANCE ='no')  ds_rate_intr_B
 		IF ( diff_status .EQ. 1 ) THEN
 			WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_diff_B
 		END IF
-		WRITE(4005,f_d32p17,ADVANCE ='no')  ds_rate_intr_B
-		WRITE(4005,f_d32p17,ADVANCE ='no') ds_rate_net_B
-		WRITE(4005,f_d32p17,ADVANCE ='no')  dynamo_exp_calc
+		WRITE(4005,f_d32p17,ADVANCE ='no')  ds_rate_net_B
+		! WRITE(4005,f_d32p17,ADVANCE ='no')  dynamo_exp_calc
 		WRITE(4005,f_d32p17,ADVANCE ='yes')  dynamo_exp
-
 
 		IF ( t_step .EQ. t_step_total ) THEN
 			CLOSE(4005)

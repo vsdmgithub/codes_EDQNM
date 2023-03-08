@@ -52,7 +52,8 @@ CHARACTER(LEN=5)::run
 	! REF-> <<< system_basicvarables >>>
 
 	! For changing dimensions in batch scripts
-	DIM_D=GHD
+	! DIM_D=GHD
+	DIM_D=300
 	U_GRID=2
 	W_GRID=2
 

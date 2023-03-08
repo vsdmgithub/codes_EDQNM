@@ -275,9 +275,9 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	  DO k_ind = 1, N
-			fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
-	  END DO
+	  ! DO k_ind = 1, N
+		! 	fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
+	  ! END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy_V',en_spec_V)
@@ -310,9 +310,9 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	  DO k_ind = 1, N
-			fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
-	  END DO
+	  ! DO k_ind = 1, N
+		! 	fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
+	  ! END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy_B',en_spec_B)
@@ -353,6 +353,7 @@ MODULE system_basicfunctions
 
 		ds_rate_net_V  = ( energy_V - energy_V_prev ) / dt
 		ds_rate_intr_V = SUM( tr_spec_V_intr * wno_band )
+		ds_rate_self_V = SUM( tr_spec_V_self * wno_band )
 
 		IF ( forc_status .EQ. 1 ) THEN
 			ds_rate_forc   = SUM( fr_spec * wno_band )
@@ -377,8 +378,9 @@ MODULE system_basicfunctions
 
 			ds_rate_net_B   = ( energy_B - energy_B_prev ) / dt
 			ds_rate_intr_B  = SUM( tr_spec_B_intr * wno_band )
-			dynamo_exp      = ds_rate_net_B / energy_B
-			dynamo_exp_calc = SUM( dyn_rate_spec * en_spec_B * wno_band ) / energy_B
+			ds_rate_self_B  = SUM( tr_spec_B_self * wno_band )
+			dynamo_exp      = DLOG( energy_B / energy_B_prev ) / dt
+			! dynamo_exp_calc = SUM( dyn_rate_spec * en_spec_B * wno_band ) / energy_B
 
 			CALL write_magnetic_temporal_data
 			! REF-> <<< system_basicoutput >>>
@@ -424,7 +426,7 @@ MODULE system_basicfunctions
 		! forcing_factor = forcing_factor * ( ( 1 - ( energy_tot - energy_0 ) * fback_coef ) **0.25D0 )
 		! fact = 0.2, fdback=15 working for d=2
 
-		forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B ) * ( ( 1 - ( energy_tot - energy_0 ) ) ** two )
+		forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B )
 		DO k_ind = 1, N
 			fr_spec( k_ind ) = forcing_factor * spec0( k_ind )
 		END DO
@@ -469,8 +471,9 @@ MODULE system_basicfunctions
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		coupling_status = 1
+		energy_B_0      = energy_B_0 * energy_V
 		energy_B_prev   = energy_B_0
-		en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
+		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
 		! CALL IC_B_large_eddies_single_mode
 		CALL IC_B_large_eddies

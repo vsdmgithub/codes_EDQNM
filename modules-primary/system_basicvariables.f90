@@ -76,7 +76,7 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::visc_status,diff_status,forc_status
 	INTEGER(KIND=4)::coupling_status
 	INTEGER(KIND=4)::kI_ind,kD_V_ind,kD_B_ind,kF_ind
-	INTEGER(KIND=4)::kD_ind_ref
+	INTEGER(KIND=4)::kD_ind_ref,kI_ind_ref
 	INTEGER(KIND=4)::triad_count
 	INTEGER(KIND=4)::triad_deleted
 	INTEGER(KIND=4)::cfl_sys,cfl_ref,cfl_cur
@@ -93,6 +93,7 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::ds_rate_visc_V,ds_rate_diff_B
 	DOUBLE PRECISION::ds_rate_net_V,ds_rate_net_B
 	DOUBLE PRECISION::ds_rate_intr_V,ds_rate_intr_B
+	DOUBLE PRECISION::ds_rate_self_V,ds_rate_self_B
 	DOUBLE PRECISION::ds_rate_ref_V,ds_rate_forc,ds_rate_ref_B
 	DOUBLE PRECISION::skewness
 	DOUBLE PRECISION::skewness_const
@@ -222,7 +223,7 @@ IMPLICIT  NONE
 		kD_ind_ref                             = 37
 		! For k_max                            = 256, kD= 64, then changes according to viscosity
 
-		visc_ref                               = 5E-4
+		visc_ref                               = 1E-3
 		! Viscosity standard (minimum) for N   =45
 
 		wno_scale                              = two ** ( 0.25D0 )
@@ -237,7 +238,7 @@ IMPLICIT  NONE
 		! visc                                 = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                               = 5E-4
+		diff_ref                               = 1E-3
 		! Reference diffusivity
 
 		diff                                   = diff_ref * ( wno_scale ** ( N_ref - N ) )
@@ -251,8 +252,8 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															 = one
-		energy_B_0                             = 1E-3
-		energy_V_0                             = energy_0 - energy_B_0
+		energy_B_0                             = 1E-2
+		energy_V_0                             = one
 		energy_V_prev                          = energy_V_0
 		! Initial kinetic energy
 		! Initial magnetic energy
@@ -275,12 +276,6 @@ IMPLICIT  NONE
 
 		wno_max                                = wno_base * ( wno_scale ** ( N - 1) )
 		! Max wave number
-
-		kI_ind                                 = 9
-		! Index (position) of integral scale
-
-		kF_ind                                 = 9
-		! Index (position) of forcing scale
 
 		wno_diss_ref                           = 64.0D0
 		kD_ind_ref                             = FLOOR( DLOG( wno_diss_ref / wno_base ) / wno_scale_log ) + 1
@@ -306,7 +301,7 @@ IMPLICIT  NONE
 		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
 		! Time scales from viscosity and diffusivity
 
-		cfl_ref                                = 10
+		cfl_ref                                = 20
 		! Minimum of CFL
 
 		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
@@ -332,7 +327,7 @@ IMPLICIT  NONE
 		t_step_save                            = t_step_total / no_of_saves
 		! Determines how many time steps after the save has to be made.
 
-		no_of_debug                            = 5
+		no_of_debug                            = 10
 		! No of times the data checked for any NaN
 
 		t_step_debug                           = t_step_total / no_of_debug
@@ -341,7 +336,7 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                            = FLOOR( t_step_total / 2.0D0 )
+		t_step_jump                            = FLOOR( two * t_step_total / fiv )
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
@@ -428,6 +423,18 @@ IMPLICIT  NONE
 			! Laplacian in spectral space
 
 		END DO
+
+		kI_ind_ref                             = 9
+		! Index (position) of integral scale
+
+		IF ( N .GT. 27 ) THEN
+			kI_ind = ( N - 27 ) / 2
+		ELSE
+			kI_ind = 1
+		END IF
+
+		kF_ind                                = kI_ind
+		! Index (position) of forcing scale
 
 		wno_forc                              = wno( kF_ind )
 		! Wavenumber of forcing scale

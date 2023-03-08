@@ -120,6 +120,30 @@ MODULE system_initialcondition
 	END
 ! </f>
 
+	SUBROUTINE IC_B_large_eddies_2
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		DOUBLE PRECISION::en_split,en_B
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		en_split = 1E-6
+		en_B = SUM( en_spec_V * wno_band )
+		DO k_ind = 1, N
+			en_spec_B( k_ind ) = ( energy_B_0 - en_split ) * spec0( k_ind ) +  en_spec_V( k_ind ) * en_split / en_B
+		END DO
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
 	SUBROUTINE IC_B_small_eddies
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -180,14 +204,15 @@ MODULE system_initialcondition
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT  NONE
+		DOUBLE PRECISION::en_B
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		en_B = SUM( en_spec_V * wno_band )
 		DO k_ind = 1, N
-			en_spec_B( k_ind ) = en_spec_V( k_ind )
+			en_spec_B( k_ind ) = en_spec_V( k_ind ) * energy_B_0 / en_B
 		END DO
 
-		en_spec_B  = en_spec_B * ( energy_B_0 / SUM( en_spec_B * wno_band ) )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
