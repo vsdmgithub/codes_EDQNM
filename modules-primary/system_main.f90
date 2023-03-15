@@ -82,8 +82,8 @@ MODULE system_main
 			! en_spec_V = zero
 			! REF-> <<< system_initialcondition >>>
 
-			energy_B = energy_B_0
 			IF ( coupling_status .NE. 0 ) THEN
+				energy_B = energy_B_0
 				! CALL IC_B_copy_V
 				! CALL IC_B_large_eddies_single_mode
 				! CALL IC_B_large_eddies

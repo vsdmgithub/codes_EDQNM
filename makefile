@@ -33,7 +33,7 @@ obj=system_timer.o\
 	system_main.o
 
 # EXECUTABLE
-run=./ex_DIM_GHD
+run=./ex
 
 # CLEAN COMMANDS
 rmex=rm ex
@@ -57,7 +57,7 @@ ex:$(ob)
 	$(cc) -c $(main_mod)
 	$(cc) $(program) $(obj) -o ex_DIM_GHD
 	$(mkcl)
-	$(run)
+	# $(run)
 
 #----------------------------end-------
 

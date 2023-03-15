@@ -476,7 +476,8 @@ MODULE system_basicfunctions
 		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
 		! CALL IC_B_large_eddies_single_mode
-		CALL IC_B_large_eddies
+		! CALL IC_B_large_eddies
+		CALL IC_B_large_eddies_2
 		! CALL IC_B_read_from_file
 		! CALL IC_B_equipartition
 		! REF-> <<< system_initialcondition >>>

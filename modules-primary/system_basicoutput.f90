@@ -99,8 +99,8 @@ MODULE system_basicoutput
 		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! type of simulation, the data is storing
 
-		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
-		CALL get_simulation_name(name_sim)
+		name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
+		! CALL get_simulation_name(name_sim)
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
 
