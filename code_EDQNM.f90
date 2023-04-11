@@ -53,8 +53,8 @@ CHARACTER(LEN=5)::run
 
 	! For changing dimensions in batch scripts
 	DIM_D=GHD
-	U_GRID=2
-	W_GRID=2
+	U_GRID=01
+	W_GRID=01
 
 	! For changing prandl number in batch scripts
 	! U_GRID=XX

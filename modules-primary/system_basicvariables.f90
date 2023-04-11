@@ -187,7 +187,7 @@ IMPLICIT  NONE
 		! LOCAL VARIABLES
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::time_min,visc_ref,diff_ref
-		DOUBLE PRECISION::cff_1,cff_2,cff_3,cff_4,cff_5
+		DOUBLE PRECISION::cff_0,cff_1,cff_2,cff_3,cff_4
 		INTEGER(KIND=4)::N_log_base
 		INTEGER(KIND=4)::N_ref
 
@@ -223,7 +223,7 @@ IMPLICIT  NONE
 		kD_ind_ref                             = 37
 		! For k_max                            = 256, kD= 64, then changes according to viscosity
 
-		visc_ref                               = 1E-3
+		visc_ref                               = 2E-4
 		! Viscosity standard (minimum) for N   =45
 
 		wno_scale                              = two ** ( 0.25D0 )
@@ -238,7 +238,7 @@ IMPLICIT  NONE
 		! visc                                 = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                               = 1E-3
+		diff_ref                               = 2E-4
 		! Reference diffusivity
 
 		diff                                   = diff_ref * ( wno_scale ** ( N_ref - N ) )
@@ -348,15 +348,22 @@ IMPLICIT  NONE
 		WRITE (W_char, f_i4) W_GRID
 		! converting viscosity and diffusivity
 
-		kol_const                              = 1.72D0
+		kol_const                              = 1.72D0 ! This is only for d=3
 		alfven_const                           = DSQRT( two / thr )
-		cff_1                                  = 5.56432696E-05
-		cff_2                                  =-2.92825995E-03
-		cff_3                                  = 5.06388864E-02
-		cff_4                                  =-3.81011909e-01
-		cff_5                                  =1.25204421e+00
-		eddy_const                             = cff_1*(dim**4.0D0)+cff_2*(dim**3.0D0)+cff_3*(dim**2.0D0)+cff_4*dim+cff_5
 		! eddy_const                           = 0.49D0 ! 0.36D0
+		IF (dim .LT. 7.01) THEN
+			cff_4                                  =+5.56432696E-05
+			cff_3                                  =-2.92825995E-03
+			cff_2                                  =+5.06388864E-02
+			cff_1                                  =-3.81011909E-01
+			cff_0                                  =+1.25204421E+00
+			eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		ELSE
+			cff_2                                  =+1.04102564E-03
+			cff_1                                  =-3.80307692E-02
+			cff_0                                  =+4.10205128E-01
+			eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		END IF
 
 		skewness_const                         = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness
