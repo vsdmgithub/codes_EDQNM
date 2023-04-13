@@ -1,0 +1,26 @@
+# !/bin/bash
+U_list=("001" "005" "010" "050" "100")
+W_list=("001" "005" "010" "050" "100")
+U_c="U_GRID=XXX"
+W_c="W_GRID=YYY"
+M="P_XXX_YYY"
+for i in ${U_list[@]}
+do
+	nU_c="U_GRID="$i
+	for j in ${W_list[@]}
+	do
+		nW_c="W_GRID="$j
+		nM="P_"$i"_"$j
+		echo $nU_c $nW_c $nM
+		sed -i "s/$U_c/$nU_c/g" code_EDQNM.f90
+		sed -i "s/$W_c/$nW_c/g" code_EDQNM.f90
+		sed -i "s/$M/$nM/g" makefile
+		make
+		sed -i "s/$nU_c/$U_c/g" code_EDQNM.f90
+		sed -i "s/$nW_c/$W_c/g" code_EDQNM.f90
+		sed -i "s/$nM/$M/g" makefile
+		cp run_PRN.sub run_$nM.sub
+		sed -i "s/$M/$nM/g" run_$nM.sub
+	done
+done
+# #=================================================
