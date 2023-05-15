@@ -52,11 +52,14 @@ CHARACTER(LEN=5)::run
 	! REF-> <<< system_basicvarables >>>
 
 	! For changing dimensions in batch scripts
-	DIM_D=300
+	DIM_D=GHD
 
 	! For changing prandl number in batch scripts
-	U_GRID=XXX
-	W_GRID=YYY
+	! U_GRID=XXX
+	! W_GRID=YYY
+
+	U_GRID = 100
+	W_GRID = 1
 
 	CALL init_global_variables
 	! REF-> <<< system_basicvariables >>>
