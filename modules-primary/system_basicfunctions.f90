@@ -371,6 +371,7 @@ MODULE system_basicfunctions
 
 			energy_B     = SUM( en_spec_B * wno_band )
 			enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
+			potential_B  = SUM( ( en_spec_B / laplacian_k ) * wno_band )
 
 			IF ( diff_status .EQ. 1 ) THEN
 				ds_rate_diff_B  = two * diff * enstrophy_B

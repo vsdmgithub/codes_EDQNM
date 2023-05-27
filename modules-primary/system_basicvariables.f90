@@ -85,6 +85,7 @@ IMPLICIT  NONE
 	DOUBLE PRECISION::visc,diff,prandl_no
 	DOUBLE PRECISION::forcing_factor
 	DOUBLE PRECISION::energy_V_0,energy_B_0
+	DOUBLE PRECISION::potential_B
 	DOUBLE PRECISION::energy_V,energy_B
 	DOUBLE PRECISION::energy_V_prev,energy_B_prev
 	DOUBLE PRECISION::energy_tot
@@ -205,13 +206,13 @@ IMPLICIT  NONE
 		dim_min_3                              = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
-		visc_status                            = 1
+		visc_status                            = 0
 		! '1' to include viscosity, '0' to do inviscid
 
-		diff_status                            = 1
+		diff_status                            = 0
 		! '1' to include diffusivity, '0' to do inviscid
 
-		forc_status                            = 1
+		forc_status                            = 0
 		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
 
 		coupling_status                        = 0

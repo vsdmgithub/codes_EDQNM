@@ -76,8 +76,8 @@ MODULE system_main
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
 			! CALL IC_V_kolmo
-			CALL IC_V_large_eddies
-			! CALL IC_V_equipartition
+			! CALL IC_V_large_eddies
+			CALL IC_V_equipartition
 			! CALL IC_V_read_from_file
 			! en_spec_V = zero
 			! REF-> <<< system_initialcondition >>>
