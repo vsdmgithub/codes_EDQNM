@@ -95,15 +95,15 @@ MODULE system_basicoutput
 		sub_dir_sp  =   'spec/'
 		! Sub directory name to store spectral data
 
-		type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
+		! type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
 		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
-		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '/'
+		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '/'
 		! type of simulation, the data is storing
 
-		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
+		name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
 
-		CALL get_simulation_name(name_sim)
+		! CALL get_simulation_name(name_sim)
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
 
@@ -111,7 +111,7 @@ MODULE system_basicoutput
 		! Use this to give CUSTOM SIMULATION NAME
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
-		                 TRIM( ADJUSTL( name_sim ) ) // '/kin/'
+		                 TRIM( ADJUSTL( name_sim ) ) // 'kin/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
 
@@ -150,7 +150,7 @@ MODULE system_basicoutput
 		IMPLICIT  NONE
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
-		                 TRIM( ADJUSTL( name_sim ) ) // '/dyn/'
+		                 TRIM( ADJUSTL( name_sim ) ) // 'dyn/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) )

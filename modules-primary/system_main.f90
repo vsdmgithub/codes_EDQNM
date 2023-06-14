@@ -270,7 +270,7 @@ MODULE system_main
 
 			CALL compute_temporal_data
 			! REF-> <<< system_basicfunctions >>>
-
+print*,energy_V
 		END IF
 
 		IF ( forc_status .EQ. 1 ) THEN

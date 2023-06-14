@@ -231,9 +231,9 @@ MODULE system_solver_eqns
 		integrand_V_intr   = zero
 
 		IF ( coupling_status .EQ. 1 ) THEN
-			! integrand_V_intr = + k_pq * geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p * E_B_q ! Nonlinear term
+			! integrand_V_intr = + k_pq * geom_c( k_ind, q_ind, p_ind ) * k_d * E_B_p * E_B_q ! Nonlinear term
 			! integrand_V_intr = - k_pq * geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k * E_B_q ! Linear term
-			integrand_V_intr = k_pq * ( geom_b( k_ind, q_ind, p_ind ) * k_d * E_B_p - geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k ) * E_B_q ! Full
+			integrand_V_intr = k_pq * geom_c( k_ind, q_ind, p_ind ) * ( k_d * E_B_p - p_d * E_V_k ) * E_B_q ! Full
 			integrand_V_intr = eddy_damping_Bk * triad_weightage( k_ind, q_ind, p_ind ) *  integrand_V_intr
 			integrand_V_intr = integrand_V_intr * wno_band( q_ind ) * wno_band( p_ind )
 		END IF
@@ -305,7 +305,7 @@ MODULE system_solver_eqns
 		DOUBLE PRECISION::dt_cur_tem
 
 		CALL compute_transfer_term_B
-		
+
 		dt_cur     = dt
 		dt_cur_tem = dt
 		DO dum_ind = 1, N

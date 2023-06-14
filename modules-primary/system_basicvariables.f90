@@ -206,13 +206,13 @@ IMPLICIT  NONE
 		dim_min_3                              = dim - thr
 		! Dimension of the space in which EDQNM is computed
 
-		visc_status                            = 0
+		visc_status                            = 1
 		! '1' to include viscosity, '0' to do inviscid
 
-		diff_status                            = 0
+		diff_status                            = 1
 		! '1' to include diffusivity, '0' to do inviscid
 
-		forc_status                            = 0
+		forc_status                            = 1
 		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
 
 		coupling_status                        = 0
@@ -316,7 +316,7 @@ IMPLICIT  NONE
 		! dt                                   = 0.005
 		! UNCOMMENT TO GIVE CUSTOM 'dt'
 
-		dt_cur 																 = dt
+		dt_cur 																 =   dt
 		time_now															 = - dt
 
 		cfl_sys                                = FLOOR( time_min / dt )
@@ -351,20 +351,20 @@ IMPLICIT  NONE
 
 		kol_const                              = 1.72D0 ! This is only for d=3
 		alfven_const                           = DSQRT( two / thr )
-		! eddy_const                           = 0.49D0 ! 0.36D0
-		IF (dim .LT. 7.01) THEN
-			cff_4                                  =+5.56432696E-05
-			cff_3                                  =-2.92825995E-03
-			cff_2                                  =+5.06388864E-02
-			cff_1                                  =-3.81011909E-01
-			cff_0                                  =+1.25204421E+00
-			eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		ELSE
-			cff_2                                  =+1.04102564E-03
-			cff_1                                  =-3.80307692E-02
-			cff_0                                  =+4.10205128E-01
-			eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		END IF
+		eddy_const                             = 0.49D0 ! 0.36D0
+		! IF (dim .LT. 7.01) THEN
+		! 	cff_4                                  =+5.56432696E-05
+		! 	cff_3                                  =-2.92825995E-03
+		! 	cff_2                                  =+5.06388864E-02
+		! 	cff_1                                  =-3.81011909E-01
+		! 	cff_0                                  =+1.25204421E+00
+		! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		! ELSE
+		! 	cff_2                                  =+1.04102564E-03
+		! 	cff_1                                  =-3.80307692E-02
+		! 	cff_0                                  =+4.10205128E-01
+		! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		! END IF
 
 		skewness_const                         = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness
@@ -438,7 +438,7 @@ IMPLICIT  NONE
 		IF ( N .GT. 27 ) THEN
 			kI_ind = ( N - 27 ) / 2
 		ELSE
-			kI_ind = 1
+			kI_ind = 3
 		END IF
 
 		kF_ind                                = kI_ind
