@@ -100,10 +100,11 @@ MODULE system_basicoutput
 		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '/'
 		! type of simulation, the data is storing
 
-		name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
+		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
 
-		! CALL get_simulation_name(name_sim)
+		CALL get_simulation_name(name_sim)
+		name_sim    =  TRIM(ADJUSTL(name_sim)) // '/'
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
 
@@ -439,8 +440,8 @@ MODULE system_basicoutput
 				WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )/ laplacian_k( k_ind )
 				WRITE(882,f_d32p17,ADVANCE = 'yes')diff * laplacian_k( k_ind ) * en_spec_B( k_ind )
 			ELSE
-				WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )/ laplacian_k( k_ind )
-				WRITE(882,f_d32p17,ADVANCE = 'yes')tr_spec_B_intr( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'yes')en_spec_B( k_ind )/ laplacian_k( k_ind )
 			END IF
 			! WRITE(882,f_d32p17,ADVANCE = 'yes')dyn_rate_spec( k_ind )
 

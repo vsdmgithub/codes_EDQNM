@@ -78,6 +78,26 @@ MODULE system_initialcondition
 	END
 ! </f>
 
+	SUBROUTINE IC_V_K41
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with large eddies. Same as one of the forcing template
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		en_spec_V = wno**(-5.0/3.0)
+		en_spec_V = energy_V_0 * en_spec_V / SUM( en_spec_V * wno_band )
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
 	SUBROUTINE IC_V_equipartition
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -189,6 +209,33 @@ MODULE system_initialcondition
 		! en_spec_B( N-1 ) = energy_B_0 / wno_band( N-1 )
 		en_spec_B( kI_ind ) = energy_B_0 / wno_band( kI_ind )
 		! en_spec_B( kD_ind ) = energy_B_0 / wno_band( kD_ind )
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE IC_B_small_scale_dynamo_testing
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Initialize initial condition with a single mode
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! _________________________
+		! LOCAL  VARIABLES
+		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		DOUBLE PRECISION::s_exp,dum
+		DOUBLE PRECISION,DIMENSION(N)::spec_B
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		s_exp     = 2.0D0 ! Integral scale spectrum exponent
+		spec_B    = DEXP( - hf * (wno-wno_diss_B)**two ) + 1E-8
+		spec_B    = spec_B / SUM( spec_B * wno_band )
+		en_spec_B = energy_B_0 * spec_B
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END

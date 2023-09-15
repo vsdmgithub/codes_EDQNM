@@ -438,7 +438,7 @@ IMPLICIT  NONE
 		IF ( N .GT. 27 ) THEN
 			kI_ind = ( N - 27 ) / 2
 		ELSE
-			kI_ind = 3
+			kI_ind = 2
 		END IF
 
 		kF_ind                                = kI_ind

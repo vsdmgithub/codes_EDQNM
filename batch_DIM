@@ -2,10 +2,8 @@
 dim_list=("200" "201" "203" "205" "207" "210" "215" "220" "230" "240" "250" \
 "275" "300" "350" "400" "450" "500" "550" "600" "700" "800")
 dim_list2=("200" "201" "203" "205" "210" "400" "600" "700" "800" "1000")
-dim_list3=("202" "203" "800" "1000" "1200")
-dim_list4=("201" )
-pt="U1W1"
-for i in ${dim_list4[@]}
+dim_list3=("201" "202" "203" "800" "1000" "1200")
+for i in ${dim_list3[@]}
 do
 	old="GHD"
 	new=$i
@@ -18,5 +16,6 @@ do
 	sed -i "s/$new_n/$old/g" makefile
 	cp run_DIM.sub run_DIM_$new_n.sub
 	sed -i "s/$old/$new_n/g" run_DIM_$new_n.sub
+	sbatch run_DIM_$new_n.sub
 done
 # #=================================================

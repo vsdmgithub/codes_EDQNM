@@ -471,17 +471,21 @@ MODULE system_basicfunctions
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		coupling_status = 1
+		coupling_status = 2
 		energy_B_0      = energy_B_0 * energy_V
 		energy_B_prev   = energy_B_0
 		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
 		! CALL IC_B_large_eddies_single_mode
 		! CALL IC_B_large_eddies
-		CALL IC_B_large_eddies_2
+		! CALL IC_B_large_eddies_2
+		CALL IC_B_small_scale_dynamo_testing
 		! CALL IC_B_read_from_file
 		! CALL IC_B_equipartition
 		! REF-> <<< system_initialcondition >>>
+
+		CALL compute_eddy_damping
+		! REF-> <<< system_basicfunctions >>>
 
 		CALL prepare_output_dynamo
 		! REF-> <<< system_basicoutput >>>
