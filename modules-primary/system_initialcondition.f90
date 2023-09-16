@@ -88,10 +88,13 @@ MODULE system_initialcondition
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT  NONE
+		DOUBLE PRECISION::smooth_exp
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		en_spec_V = wno**(-5.0/3.0)
+		smooth_exp= 4.0D0/3.0D0
+		! r delta.v \sim r^(smooth_exp) NOTATION
+		en_spec_V = wno**(-two * smooth_exp+1.0D0)
 		en_spec_V = energy_V_0 * en_spec_V / SUM( en_spec_V * wno_band )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
