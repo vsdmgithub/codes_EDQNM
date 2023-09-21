@@ -59,26 +59,7 @@ MODULE system_initialcondition
 	END
 ! </f>
 
-	SUBROUTINE IC_V_kolmo
-! <f
-	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	! ------------
-	! CALL THIS SUBROUTINE TO:
-	! Initialize initial condition with large eddies. Same as one of the forcing template
-	! -------------
-	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-		IMPLICIT  NONE
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		en_spec_V = energy_V_0 * specK
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-	END
-! </f>
-
-	SUBROUTINE IC_V_K41
+	SUBROUTINE IC_V_power_law
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -92,8 +73,10 @@ MODULE system_initialcondition
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		smooth_exp= 4.0D0/3.0D0
+		! smooth_exp= 4.0D0/3.0D0  ! EDQNM
+		smooth_exp= 3.0D0/2.0D0 ! MRCM
 		! r delta.v \sim r^(smooth_exp) NOTATION
+
 		en_spec_V = wno**(-two * smooth_exp+1.0D0)
 		en_spec_V = energy_V_0 * en_spec_V / SUM( en_spec_V * wno_band )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -134,30 +117,13 @@ MODULE system_initialcondition
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT  NONE
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		en_spec_B = energy_B_0 * spec0
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-	END
-! </f>
-
-	SUBROUTINE IC_B_large_eddies_2
-! <f
-	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	! ------------
-	! CALL THIS SUBROUTINE TO:
-	! Initialize initial condition with large eddies. Same as one of the forcing template
-	! -------------
-	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-		IMPLICIT  NONE
 		DOUBLE PRECISION::en_split,en_B
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		en_split = 1E-6
+		en_split = 0.0D0
+		! Set it to zero, if no noise is required 
+
 		en_B = SUM( en_spec_V * wno_band )
 		DO k_ind = 1, N
 			en_spec_B( k_ind ) = ( energy_B_0 - en_split ) * spec0( k_ind ) +  en_spec_V( k_ind ) * en_split / en_B
@@ -167,35 +133,7 @@ MODULE system_initialcondition
 	END
 ! </f>
 
-	SUBROUTINE IC_B_small_eddies
-! <f
-	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	! ------------
-	! CALL THIS SUBROUTINE TO:
-	! Initialize initial condition with small eddies.
-	! -------------
-	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-		IMPLICIT  NONE
-		! _________________________
-		! LOCAL  VARIABLES
-		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		DOUBLE PRECISION::s_exp,dum
-		DOUBLE PRECISION,DIMENSION(N)::spec_B
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		s_exp     = 2.0D0 ! Integral scale spectrum exponent
-		dum       = hf / ( wno_diss_B** two )
-		spec_B    = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
-		spec_B    = spec0 / SUM( spec_B * wno_band )
-		en_spec_B = energy_B_0 * spec_B
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-	END
-! </f>
-
-	SUBROUTINE IC_B_large_eddies_single_mode
+	SUBROUTINE IC_B_single_mode
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -208,7 +146,7 @@ MODULE system_initialcondition
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! en_spec_B           = tol_float
+		en_spec_B           = tol_float
 		! en_spec_B( N-1 ) = energy_B_0 / wno_band( N-1 )
 		en_spec_B( kI_ind ) = energy_B_0 / wno_band( kI_ind )
 		! en_spec_B( kD_ind ) = energy_B_0 / wno_band( kD_ind )
@@ -217,7 +155,7 @@ MODULE system_initialcondition
 	END
 ! </f>
 
-	SUBROUTINE IC_B_small_scale_dynamo_testing
+	SUBROUTINE IC_B_small_scale_dynamo
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -267,6 +205,7 @@ MODULE system_initialcondition
 
 	END
 ! </f>
+
 	SUBROUTINE IC_B_equipartition
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -309,7 +248,7 @@ MODULE system_initialcondition
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		spec0_address='IC_V_N37'
+		spec0_address='IC_V_N41'
 		! where initial condition is stored
 
 		OPEN( UNIT = 2001 ,FILE = TRIM(ADJUSTL(spec0_address))//'.dat' )
@@ -318,6 +257,8 @@ MODULE system_initialcondition
 
 			READ( 2001, '(F12.6)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO') en_spec_V( k_ind )
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
+			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='YES')  dum

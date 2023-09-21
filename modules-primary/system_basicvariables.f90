@@ -75,6 +75,7 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::sim_status,sys_status,nan_status
 	INTEGER(KIND=4)::visc_status,diff_status,forc_status
 	INTEGER(KIND=4)::coupling_status
+	INTEGER(KIND=4)::eddy_damping_model
 	INTEGER(KIND=4)::kI_ind,kD_V_ind,kD_B_ind,kF_ind
 	INTEGER(KIND=4)::kD_ind_ref,kI_ind_ref
 	INTEGER(KIND=4)::triad_count
@@ -215,14 +216,17 @@ IMPLICIT  NONE
 		forc_status                            = 1
 		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
 
-		coupling_status                        = 0
+		coupling_status                        = 1
 		! '1' for MHD EDQNM, '0' for only kinetic EDQNM, '2' for only MHD with fixed E(k)
+
+		eddy_damping_model                     = 3
+		! '1' for EDQNM, '2' for MRCM, '3' for DIA
 
 		N_ref                                  = 45
 		! Reference resolution
 
 		kD_ind_ref                             = 37
-		! For k_max                            = 256, kD= 64, then changes according to viscosity
+		! For k_max = 256, choose kD = 64, then changes for a given k_max, according to viscosity
 
 		visc_ref                               = 2E-4
 		! Viscosity standard (minimum) for N   =45
@@ -253,17 +257,18 @@ IMPLICIT  NONE
 		! Prandl number
 
 		energy_0 															 = one
+		! Total energy 
+
 		energy_B_0                             = 1E-2
-		energy_V_0                             = one
-		energy_V_prev                          = energy_V_0
-		! Initial kinetic energy
 		! Initial magnetic energy
 
-		forcing_factor												 = 0.2D0
-		! Initial forcing value constant
+		energy_V_0                             = one
+		energy_V                               = energy_V_0
+		energy_V_prev                          = energy_V_0
+		! Initial kinetic energy
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! S P E C T R U M A N D T I M E
+		! S P E C T R U M          A N D           T I M E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 		wno_scale_log                          = DLOG( wno_scale )
@@ -289,10 +294,6 @@ IMPLICIT  NONE
 		ds_rate_ref_V                          = ( wno_diss_V ** 4.0D0 ) * ( visc ** thr )
 		ds_rate_ref_B                          = ( wno_diss_B ** 4.0D0 ) * ( diff ** thr )
 		! REF-> compute_forcing_spectrum in <<< system_basicfunctions >>>
-
-		fback_coef                             = 0.2D0
-		! REF-> compute_forcing_spectrum in <<< system_basicfunctions >>>
-		! Feedback of current energy trend to force accordingly, '0' means no feedback
 
 		time_rms_V                             = one / DSQRT( energy_V_0 * ( wno_max ** two ) )
 		time_rms_B                             = one / DSQRT( energy_B_0 * ( wno_max ** two ) )
@@ -337,7 +338,10 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                            = FLOOR( two * t_step_total / fiv )
+		! t_step_jump                            = 10 !FLOOR( two * t_step_total / fiv )
+		t_step_jump                            = t_step_total
+		! In order to skip the evolution after saturation 
+		! REF-> <<< system_main >>>
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
@@ -349,25 +353,43 @@ IMPLICIT  NONE
 		WRITE (W_char, f_i4) W_GRID
 		! converting viscosity and diffusivity
 
-		kol_const                              = 1.72D0 ! This is only for d=3
-		alfven_const                           = DSQRT( two / thr )
-		eddy_const                             = 0.49D0 ! 0.36D0
-		! IF (dim .LT. 7.01) THEN
-		! 	cff_4                                  =+5.56432696E-05
-		! 	cff_3                                  =-2.92825995E-03
-		! 	cff_2                                  =+5.06388864E-02
-		! 	cff_1                                  =-3.81011909E-01
-		! 	cff_0                                  =+1.25204421E+00
-		! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		! ELSE
-		! 	cff_2                                  =+1.04102564E-03
-		! 	cff_1                                  =-3.80307692E-02
-		! 	cff_0                                  =+4.10205128E-01
-		! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		! END IF
+		kol_const                              = 1.72D0 
+		! This is  the Kolmogorov constant in the spectrum, for d=3
+
+		IF ( eddy_damping_model .EQ. 1 ) THEN
+
+			eddy_const                           = 0.49D0 ! 0.36D0
+			! The eddy constant for the EDQNM model, d=3
+
+			! IF (dim .LT. 7.01) THEN
+			! 	cff_4                                  =+5.56432696E-05
+			! 	cff_3                                  =-2.92825995E-03
+			! 	cff_2                                  =+5.06388864E-02
+			! 	cff_1                                  =-3.81011909E-01
+			! 	cff_0                                  =+1.25204421E+00
+			! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+			! ELSE
+			! 	cff_2                                  =+1.04102564E-03
+			! 	cff_1                                  =-3.80307692E-02
+			! 	cff_0                                  =+4.10205128E-01
+			! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+			! END IF
+			! The eddy constant for the EDQNM model, for dimensions between 2-20
+
+			alfven_const                         = DSQRT( two / thr )
+
+		ELSE IF ( eddy_damping_model .EQ. 2 ) THEN 
+
+			eddy_const = one / ( (kol_const**two) * DSQRT( two * energy_V_0 ) * wno_diss_V ) 
+
+		ELSE 
+
+			eddy_const = 0.1D0 
+
+		END IF
 
 		skewness_const                         = DSQRT(135.0D0/98.0D0)
-		! Constant appearing in the calc. of skewness
+		! Constant appearing in the calc. of skewness factor
 
 		dim_const                              = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
 		dim_const                              = dim_const / ( ( dim - one ) ** two )
@@ -432,7 +454,7 @@ IMPLICIT  NONE
 
 		END DO
 
-		kI_ind_ref                             = 9
+		kI_ind_ref              = 9
 		! Index (position) of integral scale
 
 		IF ( N .GT. 27 ) THEN
@@ -456,17 +478,12 @@ IMPLICIT  NONE
 		s_exp = 2.0D0 ! Integral scale spectrum exponent
 		dum   = hf / ( wno_int ** two )
 		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
-		! spec0 = DEXP( - dum * laplacian_k )
 		spec0 = spec0 / SUM( spec0 * wno_band )
+    ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! K  0  L   M   O      T  E  M  P  L  A  T  E
+		! S  M  A  L  L      S  C  A  L  E      D  Y  N  A  M  O     T  E  M  P  L  A  T  E
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! s_exp = -5.0D0/3.0D0
-		! dum   = one / wno( FLOOR( DBLE(N) / 4.0D0 ) )
-		! specK = ( wno ** s_exp ) * DEXP( -  wno * dum )
-		! specK = spec0 / SUM( spec0 * wno_band )
-
 		specK = DEXP( - ( ( wno - wno_diss_V ) / wno_base ) ** two )
 		specK = specK / SUM( specK * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

@@ -245,17 +245,37 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		DO k_ind = 1, N
-			eddy_V( k_ind ) = DSQRT( DABS( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
-			eddy_V( k_ind ) = eddy_const * eddy_V( k_ind ) + visc * laplacian_k( k_ind )
-		END DO
+		IF ( eddy_damping_model .EQ. 1 ) THEN
 
-		IF ( coupling_status .GT. 0 ) THEN
-			DO k_ind = 1, N
-				eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
-				eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
-				eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
-			END DO
+				DO k_ind = 1, N
+					eddy_V( k_ind ) = DSQRT( DABS( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+					eddy_V( k_ind ) = eddy_const * eddy_V( k_ind ) + visc * laplacian_k( k_ind )
+				END DO
+
+			IF ( coupling_status .NE. 0 ) THEN
+
+				DO k_ind = 1, N
+					eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+					eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
+					eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
+				END DO
+
+			END IF
+
+		ELSE IF( eddy_damping_model .EQ. 3 ) THEN
+
+				DO k_ind = 1, N
+					eddy_V( k_ind ) = eddy_const * DSQRT( two * energy_V ) * wno( k_ind )
+				END DO
+
+			IF ( coupling_status .NE. 0 ) THEN
+
+				DO k_ind = 1, N
+					eddy_B( k_ind ) = eddy_const * DSQRT( two * energy_V ) * wno( k_ind )
+				END DO
+
+			END IF
+
 		END IF
 
 	END
@@ -331,7 +351,7 @@ MODULE system_basicfunctions
 	END
 ! </f>
 
-	SUBROUTINE compute_temporal_data
+	SUBROUTINE compute_kinetic_temporal_data
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
@@ -367,32 +387,48 @@ MODULE system_basicfunctions
 
 		skewness   = skewness * ( enstrophy_V ** ( -1.5D0 )) * skewness_const
 
-		IF ( coupling_status .NE. 0 ) THEN
+		energy_tot = energy_V + energy_B
 
-			energy_B     = SUM( en_spec_B * wno_band )
-			enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
-			potential_B  = SUM( ( en_spec_B / laplacian_k ) * wno_band )
-
-			IF ( diff_status .EQ. 1 ) THEN
-				ds_rate_diff_B  = two * diff * enstrophy_B
-			END IF
-
-			ds_rate_net_B   = ( energy_B - energy_B_prev ) / dt
-			ds_rate_intr_B  = SUM( tr_spec_B_intr * wno_band )
-			ds_rate_self_B  = SUM( tr_spec_B_self * wno_band )
-			dynamo_exp      = DLOG( energy_B / energy_B_prev ) / dt
-			! dynamo_exp_calc = SUM( dyn_rate_spec * en_spec_B * wno_band ) / energy_B
-
-			CALL write_magnetic_temporal_data
-			! REF-> <<< system_basicoutput >>>
-
-		END IF
-
-		energy_tot   =  energy_V + energy_B
 		CALL write_kinetic_temporal_data
 		! REF-> <<< system_basicoutput >>>
 
 		energy_V_prev = energy_V
+
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+	END
+! </f>
+
+	SUBROUTINE compute_magnetic_temporal_data
+! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! TO compute net energy, enstrophy, dissipation and skewness for every time step
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT  NONE
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		! T E M P O R A L    D A T A
+		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+		energy_B     = SUM( en_spec_B * wno_band )
+		enstrophy_B  = SUM( laplacian_k * en_spec_B * wno_band )
+		potential_B  = SUM( ( en_spec_B / laplacian_k ) * wno_band )
+
+		IF ( diff_status .EQ. 1 ) THEN
+			ds_rate_diff_B  = two * diff * enstrophy_B
+		END IF
+
+		ds_rate_net_B   = ( energy_B - energy_B_prev ) / dt
+		ds_rate_intr_B  = SUM( tr_spec_B_intr * wno_band )
+		ds_rate_self_B  = SUM( tr_spec_B_self * wno_band )
+		dynamo_exp      = DLOG( energy_B / energy_B_prev ) / dt
+		! dynamo_exp_calc = SUM( dyn_rate_spec * en_spec_B * wno_band ) / energy_B
+
+		CALL write_magnetic_temporal_data
+		! REF-> <<< system_basicoutput >>>
+
 		energy_B_prev = energy_B
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -415,38 +451,29 @@ MODULE system_basicfunctions
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		fr_spec = zero
 
-		! IF ( MOD(t_step,t_step_forcing) .EQ. 0 ) THEN
-		! END IF
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! TYPE OF FORCING
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		! 1. Injected as constant
-		! F(k)= f * E(k) for 0<k<kF_ind; f = ds_rate / 0_to_kF ind E(k)dk
+		! 1. FORCED AT LARGE SCALE WITH A FIXED FORM, AND COEFFICIENT 
+		!  	ADJUSTED TO MATCH THE NET DISSIPATION
 		! --------------------------------------------------------------------------
-		! forcing_factor = forcing_factor * ( ( 1 - ( energy_tot - energy_0 ) * fback_coef ) **0.25D0 )
-		! fact = 0.2, fdback=15 working for d=2
-
 		forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B )
 		DO k_ind = 1, N
 			fr_spec( k_ind ) = forcing_factor * spec0( k_ind )
 		END DO
 
-		! 2. Injected linear to energy spectrum using integrating factor
-		! turn on the fback_coef to keep constant energy
+		! 2. INJECTED LINEAR TO ENERGY SPECTRUM USING INTEGRATING FACTOR
+		! TURN ON THE FBACK_COEF TO KEEP CONSTANT ENERGY
 		! --------------------------------------------------------------------------
-		! ds_rate_ref_V = ds_rate_V - fback_coef * ( energy_V - energy_V_0 )
-		! ds_rate_ref_V  = - ( energy_V - energy_V_0 ) / dt
-		! ds_rate_ref_V  = ds_rate_visc_V - ds_rate_intr_V
+		! forcing_factor = ( ds_rate_visc_V + ds_rate_diff_B )
 		! forcing_factor = ds_rate_ref_V / SUM( en_spec_V(:kF_ind) * wno_band(:kF_ind) )
-		! fr_spec        = zero
 		! DO k_ind = 1, kF_ind
 		! 	fr_spec( k_ind ) = forcing_factor * en_spec_V( k_ind )
 		! END DO
 		! integ_factor_V = DEXP( (- two * visc * laplacian_k + forcing_factor ) * dt )
-		! energy_V_0     = energy_V
 
-		! 3. Constant energy for certain modes
+		! 3. CONSTANT ENERGY FOR CERTAIN MODES
 		! --------------------------------------------------------------------------
 		! DO k_ind = 1, kF_ind
 		! 	en_spec_V( k_ind ) = spec0( k_ind )
@@ -471,17 +498,11 @@ MODULE system_basicfunctions
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		coupling_status = 2
 		energy_B_0      = energy_B_0 * energy_V
 		energy_B_prev   = energy_B_0
-		! en_spec_V       = en_spec_V * ( energy_V_0 / SUM( en_spec_V * wno_band ) )
 
-		! CALL IC_B_large_eddies_single_mode
-		! CALL IC_B_large_eddies
-		! CALL IC_B_large_eddies_2
-		CALL IC_B_small_scale_dynamo_testing
-		! CALL IC_B_read_from_file
-		! CALL IC_B_equipartition
+		! CALL IC_B_small_scale_dynamo
+		CALL IC_B_large_eddies
 		! REF-> <<< system_initialcondition >>>
 
 		CALL compute_eddy_damping

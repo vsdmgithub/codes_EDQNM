@@ -41,6 +41,7 @@ MODULE system_main
 
   ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
   IMPLICIT  NONE
+	INTEGER(KIND=4)::coupled_code 
 
   CONTAINS
 ! </f>
@@ -75,12 +76,9 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-			! CALL IC_V_kolmo
-			! CALL IC_V_large_eddies
-			CALL IC_V_K41
-			! CALL IC_V_equipartition
+			CALL IC_V_large_eddies
 			! CALL IC_V_read_from_file
-			! en_spec_V = zero
+			! CALL IC_V_power_law
 			! REF-> <<< system_initialcondition >>>
 
 			CALL compute_eddy_damping
@@ -119,32 +117,34 @@ MODULE system_main
 
 		IMPLICIT NONE
 
+		coupled_code = 0
+
 		! ================================================================
 		!             S        T         A         R        T
 		! 8888888888888888888888888888888888888888888888888888888888888888
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
-		GOTO 922
+		IF ( coupling_status .EQ. 2 ) THEN
+			GOTO 922
+			! Skip to the frozen model
+		END IF
 
-		time_now = -dt
-		save_ind = 0
-		DO t_step = 0, t_step_total
+		time_now  = -dt
+		save_ind  = 0
+		t_step    = 0
+		! INITIALIZATION OF THE LOOP
+
+		DO WHILE ( time_now .LT. time_total )
 
 			CALL inter_analysis
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			IF ( coupling_status .EQ. 1 ) THEN
-				CALL ab4_algorithm
-			ELSE IF ( coupling_status .EQ. 0 ) THEN
-				CALL rk4_algorithm_V
-			ELSE IF ( coupling_status .EQ. 2 ) THEN
-				CALL rk4_algorithm_B
-			END IF
+			CALL rk4_algorithm_V
 			! REF-> <<< system_solver >>>
-			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
+			! Updates kinetic energy spectrum as per EDQNM equation for next time step
 
 			IF ( nan_status .EQ. 1 ) THEN
 
@@ -160,45 +160,48 @@ MODULE system_main
 
 			END IF
 
-		END DO
+			t_step = t_step + 1
 
+		END DO
 
 		922 CONTINUE
 
 		CALL compute_transfer_term_V
-			! REF-> <<< system_solver_eqns >>>
+		! REF-> <<< system_solver_eqns >>>
 
-		CALL compute_temporal_data
+		CALL compute_kinetic_temporal_data
 		! REF-> <<< system_basicfunctions >>>
 
-		CALL prepare_perturbation_dynamo
-		! REF-> <<< system_basicfunctions >>>
+		IF ( coupling_status .NE. 0 ) THEN 
+
+			CALL prepare_perturbation_dynamo
+			! REF-> <<< system_basicfunctions >>>
+
+		ELSE 
+			GOTO 923
+			! Skip the dynamo model
+		END IF
 
 		time_now = -dt
-		t_step   = 0
 		save_ind = 0
-		! DO t_step = 0, t_step_total
+		t_step   = 0
+		! INITIALIZATION OF THE LOOP
+
 		DO WHILE ( time_now .LT. time_total )
+
+			coupled_code = 1
 
 			CALL inter_analysis
 
-			! IF ( coupling_status .NE. 0 ) THEN
-			! 	CALL compute_adaptive_time_step
-			! 	! REF-> <<< system_solver_eqns >>>
-			! END IF
+			! CALL compute_adaptive_time_step
+		  ! REF-> <<< system_solver_eqns >>>
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			IF ( coupling_status .EQ. 1 ) THEN
 				CALL ab4_algorithm
-			ELSE IF ( coupling_status .EQ. 0 ) THEN
-				CALL rk4_algorithm_V
-			ELSE IF ( coupling_status .EQ. 2 ) THEN
-				CALL rk4_algorithm_B
-			END IF
-			! REF-> <<< system_solver >>>
-			! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
+				! REF-> <<< system_solver >>>
+				! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
 
 			IF ( nan_status .EQ. 1 ) THEN
 
@@ -209,10 +212,14 @@ MODULE system_main
 			END IF
 
 			t_step = t_step + 1
+
 		END DO
 		! ================================================================
 		!                    E     N     D
 		! 8888888888888888888888888888888888888888888888888888888888888888
+
+		923 CONTINUE 
+		
 		CALL write_sim_end
 		! REF-> <<< system_basicoutput >>>
 
@@ -232,7 +239,6 @@ MODULE system_main
 
 		IMPLICIT NONE
 
-		! CALL step_to_time_convert(t_step, time_now, dt)
 		time_now = time_now + dt_cur
 		! Converts the 't_step' to actual time 'time_now'
 
@@ -240,25 +246,30 @@ MODULE system_main
 		!  S  A  V  I  N  G    D  A  T  A
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-		! IF (MOD(t_step,t_step_save) .EQ. 0) THEN
 		save_pointer = CEILING( ( time_now + tol_double ) / time_save )
+		! A pointer that shows when the data has to be saved 
+
 		IF ( save_pointer .GT. save_ind ) THEN
 
-			! WRITE (file_time,f_d8p4) time_now
 			WRITE (file_time,f_d8p4) save_ind * time_save
-			save_ind = save_ind + 1
 			! Writes 'time_now' as a CHARACTER
 
-			CALL compute_transfer_term_V
-				! REF-> <<< system_solver_eqns >>>
+			save_ind = save_ind + 1
 
-			CALL compute_kinetic_spectral_data
-			! REF-> <<< system_basicfunctions >>>
+			IF ( coupling_status .NE. 2 ) THEN
 
-			! CALL flux_decomposition
-			! REF-> <<< system_advfunctions >>>
+				CALL compute_transfer_term_V
+					! REF-> <<< system_solver_eqns >>>
 
-			IF ( coupling_status .NE. 0 ) THEN
+				CALL compute_kinetic_spectral_data
+				! REF-> <<< system_basicfunctions >>>
+
+				! CALL compute_flux_decomposition
+				! REF-> <<< system_advfunctions >>>
+
+			END IF
+
+			IF ( ( coupling_status .NE. 0 ) .AND. ( coupled_code .EQ. 1 ) ) THEN
 
 				CALL compute_transfer_term_B
 				! REF-> <<< system_solver_eqns >>>
@@ -273,8 +284,19 @@ MODULE system_main
 
 		END IF
 
-			CALL compute_temporal_data
+		IF ( coupling_status .NE. 2 ) THEN
+
+			CALL compute_kinetic_temporal_data
 			! REF-> <<< system_basicfunctions >>>
+
+		END IF
+
+		IF ( ( coupling_status .NE. 0 ) .AND. ( coupled_code .EQ. 1 ) ) THEN
+
+			CALL compute_magnetic_temporal_data
+			! REF-> <<< system_basicfunctions >>>
+
+		END IF
 
 		IF ( forc_status .EQ. 1 ) THEN
 
@@ -297,6 +319,7 @@ MODULE system_main
 			energy_V     = SUM( en_spec_V * wno_band )
 			energy_B     = SUM( en_spec_B * wno_band )
 			energy_tot   =  energy_V + energy_B
+
 			CALL print_running_status
 			! REF-> <<< system_basicoutput >>>
 

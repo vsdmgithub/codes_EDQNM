@@ -97,13 +97,14 @@ MODULE system_basicoutput
 
 		! type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
 		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
-		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '/'
+		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '-MHD/'
 		! type of simulation, the data is storing
 
 		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
 
-		CALL get_simulation_name(name_sim)
+		! CALL get_simulation_name(name_sim)
+		name_sim    = 'run_DIA'
 		name_sim    =  TRIM(ADJUSTL(name_sim)) // '/'
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
@@ -164,6 +165,11 @@ MODULE system_basicoutput
 
 		WRITE(*,'(A63)')'-----------------------------------------------------------'
 		WRITE(*,'(A63)')' DYNAMO EFFECT TESTING: PERTURBATION SEEDED IN MAG. SPECTRUM'
+
+		IF ( coupling_status .EQ. 2 ) THEN 
+			WRITE(*,'(A63)')' KINETIC SPECTRUM IS FROZEN'
+		END IF
+
 		WRITE(*,'(A63)')'-----------------------------------------------------------'
 
 	END
@@ -184,88 +190,180 @@ MODULE system_basicoutput
 		!   S  I  M  U  L  A  T  I  O  N     D  E  T  A  I  L  S
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		OPEN(UNIT =233,FILE=TRIM( ADJUSTL( file_name ) ) // '.dat')
-		WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
-		WRITE(233,"(A40)")TRIM(ADJUSTL('------  EDQNM  EQUATION----------------------'))
-		WRITE(233,"(A40)")TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
-		WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
-		WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
-		WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
-		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
-		WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-		WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
-		WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
-		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-		WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
+		IF ( coupling_status .EQ. 0 ) THEN 
+			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('------  EDQNM EQUATION----------------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+			IF ( eddy_damping_model .EQ. 1 ) THEN
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
+			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
+			ELSE 
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
+			END IF
+			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 
-		CLOSE(233)
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+			CLOSE(233)
+			! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
-		WRITE(*,"(A40)") TRIM(ADJUSTL('------  EDQNM  EQUATION----------------------'))
-		WRITE(*,"(A40)") TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
-		WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
-		WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
-		WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
-		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
-		WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-		WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
-		WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
-		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-		WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
+			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('------  EDQNM EQUATION----------------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+			IF ( eddy_damping_model .EQ. 1 ) THEN
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
+			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
+			ELSE 
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
+			END IF
+			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
+		ELSE 
+			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('------  EDQNM-MHD  EQUATION----------------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
+			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
+			IF ( eddy_damping_model .EQ. 1 ) THEN
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
+			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
+			ELSE 
+				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
+			END IF
+			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
+			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+			WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
+
+			CLOSE(233)
+			! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('------  EDQNM-MHD  EQUATION----------------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL(' - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
+			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
+			IF ( eddy_damping_model .EQ. 1 ) THEN
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
+			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
+			ELSE 
+				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
+			END IF
+			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
+			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
+			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Diffusive timescale  ',          '= ',time_diff
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' M.Energy timescale  ',           '= ',time_rms_B
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K. Diff rate        ',           '= ',ds_rate_ref_V
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' B. Diff rate        ',           '= ',ds_rate_ref_B
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of saves   ',                 '= ',no_of_saves
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' CFL System   ',                  '= ',cfl_sys
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Initial mag.energy ',            '= ',energy_B_0
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' M.Diss. wavenumber  ',           '= ',wno( kD_B_ind )
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
+			WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
+			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
+		END IF
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		file_name = TRIM( ADJUSTL( file_address ) ) // 'wavenumbers.dat'
