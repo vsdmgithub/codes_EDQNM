@@ -76,8 +76,8 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-			CALL IC_V_large_eddies
-			! CALL IC_V_read_from_file
+			! CALL IC_V_large_eddies
+			CALL IC_V_read_from_file
 			! CALL IC_V_power_law
 			! REF-> <<< system_initialcondition >>>
 

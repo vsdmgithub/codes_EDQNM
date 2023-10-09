@@ -243,12 +243,14 @@ MODULE system_initialcondition
 		! LOCAL  VARIABLES
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::A0,dum
-		CHARACTER(LEN=100)::spec0_address
+		CHARACTER(LEN=150)::spec0_address
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		spec0_address='IC_V_N41'
+		! spec0_address='IC_V_N41'
+		spec0_address='../data/D300-EDQNM-alpha/run_m1/kin/spec/spectral_data_V_t_20.0000'
+
 		! where initial condition is stored
 
 		OPEN( UNIT = 2001 ,FILE = TRIM(ADJUSTL(spec0_address))//'.dat' )
@@ -257,7 +259,6 @@ MODULE system_initialcondition
 
 			READ( 2001, '(F12.6)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO') en_spec_V( k_ind )
-			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO')   dum
 			READ( 2001, '(F32.17)',ADVANCE='NO')   dum

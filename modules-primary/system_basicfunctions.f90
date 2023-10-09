@@ -242,39 +242,23 @@ MODULE system_basicfunctions
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 		IMPLICIT NONE
+		DOUBLE PRECISION::eddy_0
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		IF ( eddy_damping_model .EQ. 1 ) THEN
+		eddy_0 = DSQRT( SUM( en_spec_V( :kD_V_ind ) * laplacian_k( :kD_V_ind ) * wno_band( :kD_V_ind ) ) )
+		DO k_ind = 1, N
+			eddy_V( k_ind ) = DSQRT( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) )
+			eddy_V( k_ind ) = eddy_const * ( eddy_0 ** eddy_exp_C ) * ( eddy_V( k_ind ) ** eddy_exp ) + visc * laplacian_k( k_ind )
+		END DO
 
-				DO k_ind = 1, N
-					eddy_V( k_ind ) = DSQRT( DABS( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
-					eddy_V( k_ind ) = eddy_const * eddy_V( k_ind ) + visc * laplacian_k( k_ind )
-				END DO
+		IF ( coupling_status .NE. 0 ) THEN
 
-			IF ( coupling_status .NE. 0 ) THEN
-
-				DO k_ind = 1, N
-					eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
-					eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
-					eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
-				END DO
-
-			END IF
-
-		ELSE IF( eddy_damping_model .EQ. 3 ) THEN
-
-				DO k_ind = 1, N
-					eddy_V( k_ind ) = eddy_const * DSQRT( two * energy_V ) * wno( k_ind )
-				END DO
-
-			IF ( coupling_status .NE. 0 ) THEN
-
-				DO k_ind = 1, N
-					eddy_B( k_ind ) = eddy_const * DSQRT( two * energy_V ) * wno( k_ind )
-				END DO
-
-			END IF
+			DO k_ind = 1, N
+				eddy_B( k_ind ) = DSQRT( DABS( SUM( en_spec_B( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) ) )
+				eddy_B( k_ind ) = eddy_const * eddy_B( k_ind ) + diff * laplacian_k( k_ind )
+				eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
+			END DO
 
 		END IF
 
@@ -295,9 +279,9 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	  ! DO k_ind = 1, N
-		! 	fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
-	  ! END DO
+	  DO k_ind = 1, N
+			fl_spec_V( k_ind ) = - SUM( tr_spec_V( : k_ind) * wno_band( : k_ind) )
+	  END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy_V',en_spec_V)
@@ -311,6 +295,7 @@ MODULE system_basicfunctions
 
 		! UNCOMMENT TO WRITE IN SINGLE FILE
 		CALL write_kinetic_energy_spectrum()
+		CALL write_eddy_spectrum()
 		! REF-> <<< system_basicoutput >>>
 
 	END
@@ -330,9 +315,9 @@ MODULE system_basicfunctions
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R A L    D A T A
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	  ! DO k_ind = 1, N
-		! 	fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
-	  ! END DO
+	  DO k_ind = 1, N
+			fl_spec_B( k_ind ) = - SUM( tr_spec_B( : k_ind) * wno_band( : k_ind) )
+	  END DO
 
 		! UNCOMMENT TO WRITE IN SEPERATE FILES
 		! CALL write_spectrum('energy_B',en_spec_B)
@@ -498,11 +483,10 @@ MODULE system_basicfunctions
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		!  D  Y  N  A  M  O
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		energy_B_0      = energy_B_0 * energy_V
 		energy_B_prev   = energy_B_0
 
-		! CALL IC_B_small_scale_dynamo
-		CALL IC_B_large_eddies
+		CALL IC_B_small_scale_dynamo
+		! CALL IC_B_large_eddies
 		! REF-> <<< system_initialcondition >>>
 
 		CALL compute_eddy_damping

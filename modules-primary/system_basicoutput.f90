@@ -97,14 +97,14 @@ MODULE system_basicoutput
 
 		! type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
 		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
-		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '-MHD/'
+		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '-MHD-alpha/'
 		! type of simulation, the data is storing
 
 		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
 		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
 
 		! CALL get_simulation_name(name_sim)
-		name_sim    = 'run_DIA'
+		name_sim    = 'run_m1'
 		name_sim    =  TRIM(ADJUSTL(name_sim)) // '/'
 		! REF-> <<< system_auxilaries >>>
 		! Creating dated and timed name for the simulation for this particular type
@@ -119,6 +119,7 @@ MODULE system_basicoutput
 
 	END
 ! </f>
+
 
 	SUBROUTINE create_output_dir
 	! <f
@@ -203,13 +204,7 @@ MODULE system_basicoutput
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
-			IF ( eddy_damping_model .EQ. 1 ) THEN
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
-			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
-			ELSE 
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
-			END IF
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Eddy damping exp        ',       '= ',eddy_damping_exp
 			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
@@ -243,13 +238,7 @@ MODULE system_basicoutput
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
-			IF ( eddy_damping_model .EQ. 1 ) THEN
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
-			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
-			ELSE 
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
-			END IF
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Eddy damping exp   ',            '= ',eddy_damping_exp
 			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Viscous timescale  ',            '= ',time_visc
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' K.Energy timescale  ',           '= ',time_rms_V
@@ -259,6 +248,7 @@ MODULE system_basicoutput
 			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Initial kin.energy ',            '= ',energy_V_0
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Smallest wavenumber',            '= ',wno_min
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Largest wavenumber ',            '= ',wno_max
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' K.Diss. wavenumber  ',           '= ',wno( kD_V_ind )
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
@@ -280,13 +270,7 @@ MODULE system_basicoutput
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Forcing status  ',               '= ',forc_status
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
-			IF ( eddy_damping_model .EQ. 1 ) THEN
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
-			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
-			ELSE 
-				WRITE(233,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
-			END IF
+			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Eddy damping exp        ',       '= ',eddy_damping_exp
 			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 			WRITE(233,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
@@ -330,13 +314,7 @@ MODULE system_basicoutput
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Forcing status   ',              '= ',forc_status
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Viscosity status   ',            '= ',visc_status
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Diffusivity status   ',          '= ',diff_status
-			IF ( eddy_damping_model .EQ. 1 ) THEN
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','EDQNM'
-			ELSE IF ( eddy_damping_model .EQ. 2 ) THEN
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','MRCM'
-			ELSE 
-				WRITE(*,"(A1,A20,A2,A8)")      '*',' Eddy damping model   ',          '= ','DIA'
-			END IF
+			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Eddy damping exp   ',            '= ',eddy_damping_exp
 			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Viscosity  ',                    '= ',visc
 			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Diffusivity  ',                  '= ',diff
 			WRITE(*,"(A1,A20,A2,F8.6)")    '*',' Prandl No   ',                   '= ',prandl_no
@@ -373,7 +351,7 @@ MODULE system_basicoutput
 			WRITE(818,f_d16p8,ADVANCE = 'no')  wno_left( k_ind )
 			WRITE(818,f_d16p8,ADVANCE = 'no')  wno( k_ind )
 			WRITE(818,f_d16p8,ADVANCE = 'no')  wno_right( k_ind )
-			WRITE(818,f_d16p8,ADVANCE = 'yes')  wno_band( k_ind )
+			WRITE(818,f_d16p8,ADVANCE = 'yes') wno_band( k_ind )
 		END DO
 
 		CLOSE(818)
@@ -487,6 +465,7 @@ MODULE system_basicoutput
 
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_V( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_V( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V( k_ind )
 			IF ( coupling_status .NE. 0 ) THEN
 				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_self( k_ind )
@@ -504,6 +483,39 @@ MODULE system_basicoutput
 		END DO
 
 		CLOSE(882)
+
+  END
+! </f>
+
+	SUBROUTINE write_eddy_spectrum()
+	! <f
+	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	! ------------
+	! CALL THIS SUBROUTINE TO:
+	! Write all spectral data in a single file (optional)
+	! -------------
+	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+		IMPLICIT NONE
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  P  R  I  N   T          O  U  T  P  U  T
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		file_name = TRIM( ADJUSTL( file_address ) ) // TRIM( ADJUSTL ( sub_dir_sp )) &
+		            // 'eddy_spectrum_V_t_'// TRIM( ADJUSTL( file_time ) ) // '.dat'
+
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		OPEN(UNIT = 884, FILE = file_name)
+
+		DO k_ind = 1, N
+
+			WRITE(884,f_d12p6,ADVANCE = 'no')  wno( k_ind )
+			WRITE(884,f_d32p17,ADVANCE = 'no') eddy_const * DSQRT( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) )
+			WRITE(884,f_d32p17,ADVANCE = 'no') eddy_V( k_ind )
+			WRITE(884,f_d32p17,ADVANCE = 'yes') visc * laplacian_k( k_ind)
+
+		END DO
+
+		CLOSE(884)
 
   END
 ! </f>
@@ -531,6 +543,7 @@ MODULE system_basicoutput
 
 			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_self( k_ind )
 			IF ( diff_status .EQ. 1 ) THEN

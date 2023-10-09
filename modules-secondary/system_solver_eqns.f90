@@ -210,20 +210,11 @@ MODULE system_solver_eqns
 
 		IMPLICIT NONE
 
-		IF ( eddy_damping_model .NE. 2 ) THEN
+		eddy_freq       = eddy_V( k_ind ) + eddy_V( q_ind ) + eddy_V( p_ind )
+		eddy_damping_V  = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq 
 
-			eddy_freq       = eddy_V( k_ind ) + eddy_V( q_ind ) + eddy_V( p_ind )
-			eddy_damping_V  = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq 
-
-			eddy_freq       = eddy_V( k_ind ) + eddy_B( q_ind ) + eddy_B( p_ind )
-			eddy_damping_Bk = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
-
-		ELSE 
-
-			eddy_damping_V  = eddy_const
-			eddy_damping_Bk = eddy_const
-
-		END IF
+		eddy_freq       = eddy_V( k_ind ) + eddy_B( q_ind ) + eddy_B( p_ind )
+		eddy_damping_Bk = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
 		p_d                = wno( p_ind )**( dim - one )
 		k_d                = wno( k_ind )**( dim - one )
@@ -266,20 +257,11 @@ MODULE system_solver_eqns
 
 		IMPLICIT NONE
 
-		IF ( eddy_damping_model .NE. 2 ) THEN
+		eddy_freq       = eddy_V( q_ind ) + eddy_B( k_ind ) + eddy_B( p_ind )
+		eddy_damping_Bq = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
-			eddy_freq       = eddy_V( q_ind ) + eddy_B( k_ind ) + eddy_B( p_ind )
-			eddy_damping_Bq = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
-
-			eddy_freq       = eddy_V( p_ind ) + eddy_B( k_ind ) + eddy_B( q_ind )
-			eddy_damping_Bp = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
-
-		ELSE 
-
-			eddy_damping_Bq = eddy_const
-			eddy_damping_Bp = eddy_const
-
-		END IF
+		eddy_freq       = eddy_V( p_ind ) + eddy_B( k_ind ) + eddy_B( q_ind )
+		eddy_damping_Bp = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
 		p_d              = wno( p_ind )**( dim - one )
 		k_d              = wno( k_ind )**( dim - one )

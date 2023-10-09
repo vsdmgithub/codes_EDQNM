@@ -75,7 +75,6 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::sim_status,sys_status,nan_status
 	INTEGER(KIND=4)::visc_status,diff_status,forc_status
 	INTEGER(KIND=4)::coupling_status
-	INTEGER(KIND=4)::eddy_damping_model
 	INTEGER(KIND=4)::kI_ind,kD_V_ind,kD_B_ind,kF_ind
 	INTEGER(KIND=4)::kD_ind_ref,kI_ind_ref
 	INTEGER(KIND=4)::triad_count
@@ -85,6 +84,7 @@ IMPLICIT  NONE
 	! ---------------------------------------------------------
 	DOUBLE PRECISION::visc,diff,prandl_no
 	DOUBLE PRECISION::forcing_factor
+	DOUBLE PRECISION::eddy_damping_exp,eddy_exp,eddy_exp_C
 	DOUBLE PRECISION::energy_V_0,energy_B_0
 	DOUBLE PRECISION::potential_B
 	DOUBLE PRECISION::energy_V,energy_B
@@ -219,16 +219,21 @@ IMPLICIT  NONE
 		coupling_status                        = 1
 		! '1' for MHD EDQNM, '0' for only kinetic EDQNM, '2' for only MHD with fixed E(k)
 
-		eddy_damping_model                     = 3
-		! '1' for EDQNM, '2' for MRCM, '3' for DIA
+		! eddy_damping_exp                       = 2.341 ! Critical value
+		eddy_damping_exp                       = -one
+		eddy_exp                               = ( thr / two ) * eddy_damping_exp
+		eddy_exp_C                             = one - eddy_exp
+		! exponent that determines the power law of the energy spectrum 
 
 		N_ref                                  = 45
 		! Reference resolution
 
-		kD_ind_ref                             = 37
+		! kD_ind_ref                             = 37 ! For standard EDQNM
+		kD_ind_ref                             = 33 ! For the alpha model
 		! For k_max = 256, choose kD = 64, then changes for a given k_max, according to viscosity
 
-		visc_ref                               = 2E-4
+		! visc_ref                               = 2E-4 ! Old standard for standard EDQNM
+		visc_ref                               = 4E-4 ! Using this for the alpha model
 		! Viscosity standard (minimum) for N   =45
 
 		wno_scale                              = two ** ( 0.25D0 )
@@ -243,7 +248,7 @@ IMPLICIT  NONE
 		! visc                                 = 0.001
 		! UNCOMMENT FOR CUSTOM VISCOSITY
 
-		diff_ref                               = 2E-4
+		diff_ref                               = 4E-4
 		! Reference diffusivity
 
 		diff                                   = diff_ref * ( wno_scale ** ( N_ref - N ) )
@@ -262,7 +267,7 @@ IMPLICIT  NONE
 		energy_B_0                             = 1E-2
 		! Initial magnetic energy
 
-		energy_V_0                             = one
+		energy_V_0                             = energy_0 - energy_B_0
 		energy_V                               = energy_V_0
 		energy_V_prev                          = energy_V_0
 		! Initial kinetic energy
@@ -338,8 +343,8 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		! t_step_jump                            = 10 !FLOOR( two * t_step_total / fiv )
-		t_step_jump                            = t_step_total
+		t_step_jump                            = 10 !FLOOR( two * t_step_total / fiv )
+		! t_step_jump                            = t_step_total
 		! In order to skip the evolution after saturation 
 		! REF-> <<< system_main >>>
 
@@ -356,37 +361,25 @@ IMPLICIT  NONE
 		kol_const                              = 1.72D0 
 		! This is  the Kolmogorov constant in the spectrum, for d=3
 
-		IF ( eddy_damping_model .EQ. 1 ) THEN
+		alfven_const                         = DSQRT( two / thr )
 
-			eddy_const                           = 0.49D0 ! 0.36D0
-			! The eddy constant for the EDQNM model, d=3
+		eddy_const                           = 0.49D0 
+		! The eddy constant for the EDQNM model, d=3
 
-			! IF (dim .LT. 7.01) THEN
-			! 	cff_4                                  =+5.56432696E-05
-			! 	cff_3                                  =-2.92825995E-03
-			! 	cff_2                                  =+5.06388864E-02
-			! 	cff_1                                  =-3.81011909E-01
-			! 	cff_0                                  =+1.25204421E+00
-			! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-			! ELSE
-			! 	cff_2                                  =+1.04102564E-03
-			! 	cff_1                                  =-3.80307692E-02
-			! 	cff_0                                  =+4.10205128E-01
-			! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-			! END IF
-			! The eddy constant for the EDQNM model, for dimensions between 2-20
-
-			alfven_const                         = DSQRT( two / thr )
-
-		ELSE IF ( eddy_damping_model .EQ. 2 ) THEN 
-
-			eddy_const = one / ( (kol_const**two) * DSQRT( two * energy_V_0 ) * wno_diss_V ) 
-
-		ELSE 
-
-			eddy_const = 0.1D0 
-
-		END IF
+		! IF (dim .LT. 7.01) THEN
+		! 	cff_4                                  =+5.56432696E-05
+		! 	cff_3                                  =-2.92825995E-03
+		! 	cff_2                                  =+5.06388864E-02
+		! 	cff_1                                  =-3.81011909E-01
+		! 	cff_0                                  =+1.25204421E+00
+		! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		! ELSE
+		! 	cff_2                                  =+1.04102564E-03
+		! 	cff_1                                  =-3.80307692E-02
+		! 	cff_0                                  =+4.10205128E-01
+		! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
+		! END IF
+		! The eddy constant for the EDQNM model, for dimensions between 2-20
 
 		skewness_const                         = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness factor
