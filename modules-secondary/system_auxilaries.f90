@@ -158,7 +158,7 @@ MODULE system_auxilaries
 
 		sim_char    =  'run_D'//TRIM(ADJUSTL(date_char))//TRIM(ADJUSTL(month_char))//&
 		TRIM(ADJUSTL(year_char))//'_T'//TRIM(ADJUSTL(hour_char))//&
-		TRIM(ADJUSTL(min_char))//TRIM(ADJUSTL(sec_char))
+		TRIM(ADJUSTL(min_char))//TRIM(ADJUSTL(sec_char))//'/'
 
 	END
 ! </f>

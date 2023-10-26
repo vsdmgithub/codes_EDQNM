@@ -216,8 +216,8 @@ MODULE system_solver_eqns
 		eddy_freq       = eddy_V( k_ind ) + eddy_B( q_ind ) + eddy_B( p_ind )
 		eddy_damping_Bk = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
-		p_d                = wno( p_ind )**( dim - one )
-		k_d                = wno( k_ind )**( dim - one )
+		p_d                = wno( p_ind )**two
+		k_d                = wno( k_ind )**two
 		k_pq               = wno( k_ind ) / ( wno( p_ind ) * wno( q_ind ) )
 		E_V_k              = en_spec_V( k_ind )
 		E_V_p              = en_spec_V( p_ind )
@@ -226,16 +226,16 @@ MODULE system_solver_eqns
 		E_B_q              = en_spec_B( q_ind )
 
 		integrand_V_self   = k_pq * geom_b( k_ind, q_ind, p_ind ) * ( k_d * E_V_p - p_d * E_V_k ) * E_V_q
-		integrand_V_self   = eddy_damping_V * triad_weightage( k_ind, q_ind, p_ind ) * integrand_V_self
+		integrand_V_self   = eddy_damping_V * integrand_V_self
 		integrand_V_self   = integrand_V_self * wno_band( q_ind ) * wno_band( p_ind )
 
-		integrand_V_intr   = zero
+		! integrand_V_intr   = zero
 
 		IF ( coupling_status .EQ. 1 ) THEN
 			! integrand_V_intr = + k_pq * geom_c( k_ind, q_ind, p_ind ) * k_d * E_B_p * E_B_q ! Nonlinear term
 			! integrand_V_intr = - k_pq * geom_c( k_ind, q_ind, p_ind ) * p_d * E_V_k * E_B_q ! Linear term
 			integrand_V_intr = k_pq * geom_c( k_ind, q_ind, p_ind ) * ( k_d * E_B_p - p_d * E_V_k ) * E_B_q ! Full
-			integrand_V_intr = eddy_damping_Bk * triad_weightage( k_ind, q_ind, p_ind ) *  integrand_V_intr
+			integrand_V_intr = eddy_damping_Bk  *  integrand_V_intr
 			integrand_V_intr = integrand_V_intr * wno_band( q_ind ) * wno_band( p_ind )
 		END IF
 
@@ -263,8 +263,8 @@ MODULE system_solver_eqns
 		eddy_freq       = eddy_V( p_ind ) + eddy_B( k_ind ) + eddy_B( q_ind )
 		eddy_damping_Bp = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
-		p_d              = wno( p_ind )**( dim - one )
-		k_d              = wno( k_ind )**( dim - one )
+		p_d              = wno( p_ind )**two
+		k_d              = wno( k_ind )**two
 		k_pq             = wno( k_ind ) / ( wno( p_ind ) * wno( q_ind ) )
 		p_kq             = wno( p_ind ) / ( wno( k_ind ) * wno( q_ind ) )
 		E_V_p            = en_spec_V( p_ind )
@@ -273,22 +273,20 @@ MODULE system_solver_eqns
 		E_B_q            = en_spec_B( q_ind )
 		E_B_k            = en_spec_B( k_ind )
 
-		! integrand_B_self = zero
 		integrand_B_self = k_pq * geom_h( k_ind, q_ind, p_ind ) * ( k_d * E_B_p - p_d * E_B_k ) * E_V_q
-		integrand_B_self = eddy_damping_Bq * triad_weightage( k_ind, q_ind, p_ind ) * integrand_B_self
-		! integrand_B_self = integrand_B_self * wno_band( q_ind ) * wno_band( p_ind )
+		integrand_B_self = eddy_damping_Bq  * integrand_B_self
 		integrand_B_self = integrand_B_self * wno_band( q_ind ) * wno_band( p_ind )
-		! integrand_B_intr = zero
 
+		! integrand_B_intr = zero
 		! integrand_B_intr = - p_kq * geom_c( p_ind, q_ind, k_ind ) * p_d * E_B_k * E_B_q  ! Nonlinear term
 		! integrand_B_intr = + p_kq * geom_c( p_ind, q_ind, k_ind ) * k_d * E_V_p * E_B_q  !  Linear terms
 		integrand_B_intr = p_kq * geom_c( p_ind, q_ind, k_ind ) * ( k_d * E_V_p - p_d * E_B_k ) * E_B_q ! Full
-		integrand_B_intr = eddy_damping_Bp * triad_weightage( k_ind, q_ind, p_ind ) * integrand_B_intr
+		integrand_B_intr = eddy_damping_Bp  * integrand_B_intr
 		integrand_B_intr = integrand_B_intr * wno_band( q_ind ) * wno_band( p_ind )
 
 		IF (integrand_B_intr .NE. integrand_B_intr) THEN
 			print*,"NaN here at B-transfer term calc at ",k_ind,q_ind,p_ind,&
-			triad_weightage(k_ind,q_ind, p_ind),integrand_B_self,integrand_B_intr
+			integrand_B_self,integrand_B_intr
 			nan_status=1
 		END IF
 
@@ -311,11 +309,20 @@ MODULE system_solver_eqns
 		dt_cur     = dt
 		dt_cur_tem = dt
 		DO dum_ind = 1, N
-			IF ( tr_spec_B( dum_ind ) .LT. zero ) THEN ! Checks if the transfer term is sucking up energy
-				cfl_cur = en_spec_B( dum_ind ) / ( dt_cur * DABS( tr_spec_B( dum_ind ) ) ) ! Looks at the CFL based on the transfer term
-				IF ( cfl_cur .LE. cfl_sys ) THEN ! If it is too low, then the dt is adjusted
+
+			IF ( tr_spec_B( dum_ind ) .LT. zero ) THEN 
+			! Checks if the transfer term is sucking up energy
+			
+				cfl_cur = en_spec_B( dum_ind ) / ( dt_cur * DABS( tr_spec_B( dum_ind ) ) ) 
+				! Looks at the CFL based on the transfer term
+				
+				IF ( cfl_cur .LT. cfl_sys ) THEN 
+				! If it is too low, then the dt is adjusted
+					
 					dt_cur_tem = en_spec_B( dum_ind ) / ( cfl_sys * DABS( tr_spec_B( dum_ind ) ) )
-					IF ( dt_cur_tem .LT. dt_cur ) THEN ! The adjusted dt is continuously monitored to the lowest one
+
+					IF ( dt_cur_tem .LT. dt_cur ) THEN 
+					! The adjusted dt is continuously monitored across all k, to find the lowest one necessary
 						dt_cur = dt_cur_tem
 					END IF
 				END IF
@@ -325,7 +332,7 @@ MODULE system_solver_eqns
 		IF ( dt .NE. dt_cur ) THEN
 			dt_cur_tem = dt_cur
 			CALL find_time_step( dt_cur_tem, dt_cur )
-			PRINT*,'dt changed to ',dt_cur,'at t=',time_now
+			PRINT*,'Time-step changed from ',dt,' to ',dt_cur,'at t=',time_now
 		END IF
 
 	! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -356,12 +363,12 @@ MODULE system_solver_eqns
 		eddy_freq              = eddy_V( p_ind ) + eddy_B( k_ind ) + eddy_B( q_ind )
 		eddy_damping_Bp        = ( one - DEXP( - time_now * eddy_freq ) ) / eddy_freq
 
-		k_d                    = wno( k_ind )**( dim - one )
+		k_d                    = wno( k_ind )**two
 		p_kq                   = wno( p_ind ) / ( wno( k_ind ) * wno( q_ind ) )
 		E_V_p                  = en_spec_V( p_ind )
 
 		dyn_rate_integrand     = + p_kq * geom_c( p_ind, q_ind, k_ind ) * k_d * E_V_p
-		dyn_rate_integrand     = eddy_damping_Bp * triad_weightage( k_ind, q_ind, p_ind ) * dyn_rate_integrand
+		dyn_rate_integrand     = eddy_damping_Bp * dyn_rate_integrand
 		dyn_rate_integrand     = dyn_rate_integrand * wno_band( k_ind ) * wno_band( p_ind )
 
 		dyn_rate_spec( q_ind ) = dyn_rate_spec( q_ind ) + dyn_rate_integrand

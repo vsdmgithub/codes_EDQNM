@@ -33,8 +33,7 @@ obj=system_timer.o\
 	system_main.o
 
 # EXECUTABLE
-run=./ex
-# ex_P_XXX_YYY
+run=./ex_A2b3
 
 # CLEAN COMMANDS
 rmex=rm ex
@@ -56,9 +55,9 @@ ex:$(ob)
 	$(cc) -c $(solver_mod)
 	$(cc) -c $(advfunctions_mod)
 	$(cc) -c $(main_mod)
-	$(cc) $(program) $(obj) -o ex
+	$(cc) $(program) $(obj) -o ex_A2b3
 	$(mkcl)
-	$(run)
+# 	$(run)
 
 #----------------------------end-------
 

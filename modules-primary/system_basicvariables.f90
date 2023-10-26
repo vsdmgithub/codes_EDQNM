@@ -13,7 +13,7 @@
 
 ! ##################
 ! MODULE NAME  : system_basicvariables
-! LAST MODIFIED: 15 NOV 2022
+! LAST MODIFIED: 09 OCT 2023
 ! ##################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -45,11 +45,11 @@ IMPLICIT  NONE
 	INTEGER (KIND=4)::N,N_log_ref
 	INTEGER (KIND=4)::k_ind,q_ind,p_ind
 	INTEGER (KIND=4)::k2_ind,dum_ind
-	INTEGER (KIND=4)::DIM_D
-	CHARACTER(LEN=60)::N_char,dim_char
+	CHARACTER(LEN=60)::N_char
+	CHARACTER(LEN=60)::A_char
 	CHARACTER(LEN=60)::U_char,W_char
+	CHARACTER(LEN=60)::hint_sim
 	! ---------------------------------------------------------
-	DOUBLE PRECISION::dim,dim_min_3
 	DOUBLE PRECISION::wno_base,wno_max,wno_min
 	DOUBLE PRECISION::wno_forc,wno_diss_V,wno_diss_B,wno_int
 	DOUBLE PRECISION::wno_diss_ref
@@ -74,14 +74,14 @@ IMPLICIT  NONE
 	INTEGER(KIND=4)::nan_count
 	INTEGER(KIND=4)::sim_status,sys_status,nan_status
 	INTEGER(KIND=4)::visc_status,diff_status,forc_status
-	INTEGER(KIND=4)::coupling_status
+	INTEGER(KIND=4)::coupling_status,coupled_code
 	INTEGER(KIND=4)::kI_ind,kD_V_ind,kD_B_ind,kF_ind
 	INTEGER(KIND=4)::kD_ind_ref,kI_ind_ref
 	INTEGER(KIND=4)::triad_count
-	INTEGER(KIND=4)::triad_deleted
 	INTEGER(KIND=4)::cfl_sys,cfl_ref,cfl_cur
 	INTEGER(KIND=4)::U_GRID,W_GRID
 	! ---------------------------------------------------------
+	DOUBLE PRECISION::loc_par
 	DOUBLE PRECISION::visc,diff,prandl_no
 	DOUBLE PRECISION::forcing_factor
 	DOUBLE PRECISION::eddy_damping_exp,eddy_exp,eddy_exp_C
@@ -103,8 +103,6 @@ IMPLICIT  NONE
 	! _________________________
 	! SOLVER VARIABLES
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	DOUBLE PRECISION::fback_coef
-	DOUBLE PRECISION::dim_const,kol_const
 	DOUBLE PRECISION::eddy_const,alfven_const
 	DOUBLE PRECISION::integrand_V_intr,integrand_V_self
 	DOUBLE PRECISION::integrand_B_intr,integrand_B_self
@@ -120,13 +118,15 @@ IMPLICIT  NONE
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::en_spec_B,tr_spec_B,fl_spec_B
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::tr_spec_B_intr,tr_spec_B_self
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::tr_spec_V_intr,tr_spec_V_self
-	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::fr_spec,spec0,specK,dyn_rate_spec
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::fl_spec_B_intr,fl_spec_V_self
+	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::spec0,fr_spec,dyn_rate_spec
 	DOUBLE PRECISION,DIMENSION(:),ALLOCATABLE::integ_factor_B,integ_factor_V
+	INTEGER(KIND=4),DIMENSION(:,:,:),ALLOCATABLE::kqp_status
 	! _________________________
-	! EDQNM ARRAYS
+	! EDQNM-MHD ARRAYS
 	! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	! _________________________
-	DOUBLE PRECISION,DIMENSION(:,:,:),ALLOCATABLE::geom_b,geom_c,geom_h,triad_weightage
+	DOUBLE PRECISION,DIMENSION(:,:,:),ALLOCATABLE::geom_b,geom_c,geom_h
 	INTEGER(KIND=4),DIMENSION(:,:),ALLOCATABLE   ::p_ind_min,p_ind_max
 	! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 
@@ -189,41 +189,82 @@ IMPLICIT  NONE
 		! LOCAL VARIABLES
 		! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		DOUBLE PRECISION::time_min,visc_ref,diff_ref
-		DOUBLE PRECISION::cff_0,cff_1,cff_2,cff_3,cff_4
+		DOUBLE PRECISION::jump_loc
 		INTEGER(KIND=4)::N_log_base
 		INTEGER(KIND=4)::N_ref
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! NOTES:
-		! 1. This is forced viscous EDQNM, with forcing given in the first
+		! 1. This is forced, viscous EDQNM-MHD, with forcing given in the first
 		! few shells matching the dissipation rate.
 		! 2. Viscosity levels for resolutions
-		! N45 - Minimum of 0.0005.
+		! Reference for N45: Minimum of 0.0005.
 		! 3. Eddy constant is generally not changed.
 		! 4. Two timescales are derived, one from net energy, other from viscosity
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-		dim                                    = DBLE(DIM_D) / 100.0D0
-		dim_min_3                              = dim - thr
-		! Dimension of the space in which EDQNM is computed
-
 		visc_status                            = 1
-		! '1' to include viscosity, '0' to do inviscid
+		! '1' TO INCLUDE VISCOSITY, '0' FOR INVISCID CASE
 
 		diff_status                            = 1
-		! '1' to include diffusivity, '0' to do inviscid
+		! '1' TO INCLUDE DIFFUSIVITY, '0' FOR IDEAL CASE
 
 		forc_status                            = 1
-		! '1' to activate forcing, '0' to deactivate forcing (only for kinetic spectrum)
+		! '1' TO ACTIVATE FORCING, '0' FOR DECAYING CASE (ONLY FOR KINETIC SPECTRUM)
 
-		coupling_status                        = 1
-		! '1' for MHD EDQNM, '0' for only kinetic EDQNM, '2' for only MHD with fixed E(k)
+		coupling_status                        = 0
+		! '1' FOR COUPLED CASE
+		! '0' FOR PURE KINETIC CASE
+		! '2' FOR ONE-WAY COUPLED CASE, WITH A FIXED E(K)
 
-		! eddy_damping_exp                       = 2.341 ! Critical value
-		eddy_damping_exp                       = -one
+		jump_loc                               = 0.4D0
+
+		energy_0                               = one
+		! TOTAL ENERGY 
+
+		energy_B_0                             = zero
+		! INITIAL MAGNETIC ENERGY
+
+		energy_V_0                             = energy_0 - energy_B_0
+		! INITIAL KINETIC ENERGY
+
+		energy_V                               = energy_V_0
+		energy_V_prev                          = energy_V_0
+		! Initial kinetic energy
+
+		eddy_damping_exp                       = 2.0D0/3.0D0
+		! THE EXPONENT IN THE MODEL
+
+		! WRITE (A_char, f_i8) FLOOR( eddy_damping_exp * 100) 
+		! A_char = 'm2'			! -2
+		! A_char = 'm1'			! -1
+		! A_char = 'zer'		!  0
+		! A_char = '1b4'		!  0.25
+		! A_char = '1b3'		!  0.33
+		! A_char = '1b2'		!  0.5
+		! A_char = '8b15'		!  0.53
+		A_char = '2b3'		!	 0.66
+		! A_char = '3b4'		!  0.75
+		! A_char = '1'			!  1.0
+		! A_char = '5b4' 		!  1.25
+		! A_char = '4b3' 		!  1.33
+		! A_char = '3b2' 		!  1.5
+		! A_char = '8b5'		!  1.6
+		! A_char = '16b9'		!  1.76
+		! A_char = '28b15'	!  1.86
+		! converting resolution value to CHARACTER
+
+		! hint_sim                               = '_LE_a0p2'
+		! Large eddy, with localness parameter in the flux decomposition is 0.1
+
+		loc_par                                = 0.2
+		! Ratio of min to max triad sides, to say it is a nonlocal triad interactions
+		! This is userdefined. Has to be < 1 is must.
+		! REF <<< system_advfunctions >>>
+
 		eddy_exp                               = ( thr / two ) * eddy_damping_exp
 		eddy_exp_C                             = one - eddy_exp
-		! exponent that determines the power law of the energy spectrum 
+		! EXPONENT THAT DETERMINES THE POWER LAW OF THE ENERGY SPECTRUM 
 
 		N_ref                                  = 45
 		! Reference resolution
@@ -232,21 +273,19 @@ IMPLICIT  NONE
 		kD_ind_ref                             = 33 ! For the alpha model
 		! For k_max = 256, choose kD = 64, then changes for a given k_max, according to viscosity
 
-		! visc_ref                               = 2E-4 ! Old standard for standard EDQNM
+		! visc_ref                               = 2E-4 ! For standard EDQNM
 		visc_ref                               = 4E-4 ! Using this for the alpha model
 		! Viscosity standard (minimum) for N   =45
 
 		wno_scale                              = two ** ( 0.25D0 )
+		! Lambda in the wavenumber array
 
 		N_log_ref 														 = CEILING( ( DBLE(N) - one ) / 4.0D0 - 3.0D0 )
-		! k_max                                = 2^(N_log_ref), so for N=13, you get k_max=1
+		! k_max  = 2^(N_log_ref), so for N=13, you get k_max=1
 
 		visc                                   = visc_ref * ( wno_scale ** ( N_ref - N ) )
 		visc                                   = U_GRID * visc
 		! Adjusted minimum viscosity for the current N
-
-		! visc                                 = 0.001
-		! UNCOMMENT FOR CUSTOM VISCOSITY
 
 		diff_ref                               = 4E-4
 		! Reference diffusivity
@@ -255,22 +294,14 @@ IMPLICIT  NONE
 		diff                                   = W_GRID * diff
 		! Adjusted minimum diffusivity for the current N
 
-		! diff                                 = 0.02D0
+		! visc                                 = 0.01D0
 		! UNCOMMENT FOR CUSTOM VISCOSITY
+
+		! diff                                 = 0.02D0
+		! UNCOMMENT FOR CUSTOM DIFFUSIVITY 
 
 		prandl_no															 = visc / diff
 		! Prandl number
-
-		energy_0 															 = one
-		! Total energy 
-
-		energy_B_0                             = 1E-2
-		! Initial magnetic energy
-
-		energy_V_0                             = energy_0 - energy_B_0
-		energy_V                               = energy_V_0
-		energy_V_prev                          = energy_V_0
-		! Initial kinetic energy
 
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		! S P E C T R U M          A N D           T I M E
@@ -298,29 +329,30 @@ IMPLICIT  NONE
 
 		ds_rate_ref_V                          = ( wno_diss_V ** 4.0D0 ) * ( visc ** thr )
 		ds_rate_ref_B                          = ( wno_diss_B ** 4.0D0 ) * ( diff ** thr )
-		! REF-> compute_forcing_spectrum in <<< system_basicfunctions >>>
+		! Can be used in the forcing to maintain the required dissipation rate
 
 		time_rms_V                             = one / DSQRT( energy_V_0 * ( wno_max ** two ) )
 		time_rms_B                             = one / DSQRT( energy_B_0 * ( wno_max ** two ) )
-		! Time scale from energy and largest momentum
+		! Time scale from energy and largest wavenumber 
 
 		time_visc                              = one / ( visc * ( wno_max ** two ) + tol_float )
 		time_diff                              = one / ( diff * ( wno_max ** two ) + tol_float )
-		! Time scales from viscosity and diffusivity
+		! Time scales from viscosity and diffusivity. These are the smallest timescales respectively
 
-		cfl_ref                                = 20
-		! Minimum of CFL
+		cfl_ref                                = 10 
+		! RATIO BETWEEN SMALLEST TIME SCALE IN THE SYSTEM AND THE TIME-STEP
 
 		time_min                               = MIN( time_rms_V, time_rms_B, time_visc, time_diff )
+		! Smallest time-scale in the system
 
 		dt_max                                 = time_min / DBLE( cfl_ref )
-		! Maximum time step to satisfy the CFL condition.
+		! Maximum time step to satisfy the CFL_ref condition
 
 		CALL find_time_step( dt_max, dt )
 		! REF-> <<< system_auxilaries >>>
 
 		! dt                                   = 0.005
-		! UNCOMMENT TO GIVE CUSTOM 'dt'
+		! UNCOMMENT TO GIVE CUSTOM TIMESTEP
 
 		dt_cur 																 =   dt
 		time_now															 = - dt
@@ -343,51 +375,29 @@ IMPLICIT  NONE
 		CALL step_to_time_convert( t_step_save, time_save, dt)
 		! REF-> <<< system_auxilaries >>>
 
-		t_step_jump                            = 10 !FLOOR( two * t_step_total / fiv )
-		! t_step_jump                            = t_step_total
-		! In order to skip the evolution after saturation 
-		! REF-> <<< system_main >>>
+		IF ( coupling_status .NE. 0 ) THEN
+			t_step_jump                            = FLOOR( jump_loc * DBLE( t_step_total ) )
+			! In order to skip the evolution after saturation 
+			! REF-> <<< system_main >>>
+		ELSE 
+			t_step_jump                            = t_step_total
+		END IF
 
 		WRITE (N_char, f_i8) N
 		! converting resolution value to CHARACTER
 
-		WRITE (dim_char, f_i4) DIM_D
-		! converting dimension to CHARACTERk
-
 		WRITE (U_char, f_i4) U_GRID
 		WRITE (W_char, f_i4) W_GRID
-		! converting viscosity and diffusivity
-
-		kol_const                              = 1.72D0 
-		! This is  the Kolmogorov constant in the spectrum, for d=3
+		! converting viscosity and diffusivity to CHARACTER
 
 		alfven_const                         = DSQRT( two / thr )
+		! Alfven constant for alfven wave timescale in the eddy-damping for the magnetic spectrum
 
 		eddy_const                           = 0.49D0 
-		! The eddy constant for the EDQNM model, d=3
+		! The eddy constant for the EDQNM model to get the Kolmogorov constant
 
-		! IF (dim .LT. 7.01) THEN
-		! 	cff_4                                  =+5.56432696E-05
-		! 	cff_3                                  =-2.92825995E-03
-		! 	cff_2                                  =+5.06388864E-02
-		! 	cff_1                                  =-3.81011909E-01
-		! 	cff_0                                  =+1.25204421E+00
-		! 	eddy_const                             = cff_4*(dim**4.0D0)+cff_3*(dim**3.0D0)+cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		! ELSE
-		! 	cff_2                                  =+1.04102564E-03
-		! 	cff_1                                  =-3.80307692E-02
-		! 	cff_0                                  =+4.10205128E-01
-		! 	eddy_const                             = cff_2*(dim**2.0D0)+cff_1*dim+cff_0
-		! END IF
-		! The eddy constant for the EDQNM model, for dimensions between 2-20
-
-		skewness_const                         = DSQRT(135.0D0/98.0D0)
+		skewness_const                       = DSQRT(135.0D0/98.0D0)
 		! Constant appearing in the calc. of skewness factor
-
-		dim_const                              = 8.0D0 * solid_angle( dim - two ) / solid_angle( dim - one )
-		dim_const                              = dim_const / ( ( dim - one ) ** two )
-		! REF-> <<< system_auxilaries >>>
-		! Const of integration in 'd' dimension for the transfer term
 
 		sim_status                             = 0
 		! This being the first variable to start the simulation. At last, it will be set to '1'
@@ -448,13 +458,15 @@ IMPLICIT  NONE
 		END DO
 
 		kI_ind_ref              = 9
-		! Index (position) of integral scale
+		! Index (position) of integral scale for N=45
 
-		IF ( N .GT. 27 ) THEN
-			kI_ind = ( N - 27 ) / 2
-		ELSE
-			kI_ind = 2
-		END IF
+		! IF ( N .GT. 27 ) THEN
+		! 	kI_ind = ( N - 27 ) / 2
+		! ELSE
+		! 	kI_ind = 2
+		! END IF
+
+		kI_ind                                = 2
 
 		kF_ind                                = kI_ind
 		! Index (position) of forcing scale
@@ -471,14 +483,8 @@ IMPLICIT  NONE
 		s_exp = 2.0D0 ! Integral scale spectrum exponent
 		dum   = hf / ( wno_int ** two )
 		spec0 = ( wno ** s_exp ) * DEXP( - dum * laplacian_k )
+		! spec0 = DEXP( - ( dum * laplacian_k ) ** 4.0D0 )
 		spec0 = spec0 / SUM( spec0 * wno_band )
-    ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		! S  M  A  L  L      S  C  A  L  E      D  Y  N  A  M  O     T  E  M  P  L  A  T  E
-		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		specK = DEXP( - ( ( wno - wno_diss_V ) / wno_base ) ** two )
-		specK = specK / SUM( specK * wno_band )
     ! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 	END
@@ -502,12 +508,13 @@ IMPLICIT  NONE
 		ALLOCATE( wno( N ) , wno_band ( N ) )
 		ALLOCATE( wno_right( N ) , wno_left ( N ) )
 		ALLOCATE( laplacian_k( N ) )
-		ALLOCATE( spec0( N ), specK( N ), en_spec_V( N ), en_spec_B( N ) )
+		ALLOCATE( spec0( N ), en_spec_V( N ), en_spec_B( N ) )
 		ALLOCATE( eddy_V( N ), eddy_B( N ) )
 		ALLOCATE( tr_spec_V( N ), tr_spec_B( N ) )
 		ALLOCATE( tr_spec_V_self( N ), tr_spec_B_self( N ) )
 		ALLOCATE( tr_spec_V_intr( N ), tr_spec_B_intr( N ) )
 		ALLOCATE( fl_spec_V( N ), fl_spec_B( N ) )
+		ALLOCATE( fl_spec_V_self( N ), fl_spec_B_intr( N ) )
 		ALLOCATE( dyn_rate_spec( N ) )
 		IF ( forc_status .EQ. 1 ) THEN
 			ALLOCATE( fr_spec( N ) )
@@ -533,11 +540,12 @@ IMPLICIT  NONE
 		DEALLOCATE( wno , wno_band )
 		DEALLOCATE( wno_right , wno_left  )
 		DEALLOCATE( laplacian_k )
-		DEALLOCATE( spec0, specK, en_spec_V, en_spec_B )
+		DEALLOCATE( spec0, en_spec_V, en_spec_B )
 		DEALLOCATE( eddy_V, eddy_B )
 		DEALLOCATE( tr_spec_V, tr_spec_B, fl_spec_V, fl_spec_B )
 		DEALLOCATE( tr_spec_V_intr, tr_spec_B_intr )
 		DEALLOCATE( tr_spec_V_self, tr_spec_B_self )
+		DEALLOCATE( fl_spec_V_self, fl_spec_B_intr )
 		DEALLOCATE( dyn_rate_spec )
 		IF ( forc_status .EQ. 1 ) THEN
 			DEALLOCATE( fr_spec )

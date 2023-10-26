@@ -13,11 +13,11 @@
 
 ! ##################
 ! MODULE NAME: system_main
-! LAST MODIFIED: 15 NOV 2022
+! LAST MODIFIED: 15 OCT 2023
 ! ##################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-! MAIN MODULE FOR EDQNM EQUATION
+! MAIN MODULE FOR EDQNM-MHD EQUATION
 ! IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
 ! </f>
 
@@ -25,12 +25,13 @@ MODULE system_main
 ! <f
 ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ! ------------
-! * This is the main module, containing the flow of simulation.
-! * Simply divided into three parts
-! * -> Pre-analysis
-! * -> Evolution
-! * -> Inter-analysis
-! * -> Post-analysis
+! * This is the main module, containing the flow of the simulation.
+! * Divided into four main parts (SUBROUTINES):
+! * -> pre_analysis
+! * -> time_evolution
+! * -> inter_analysis
+! * -> post_analysis
+
 ! MAIN MODULE
 ! -------------
 ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -41,7 +42,6 @@ MODULE system_main
 
   ! HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
   IMPLICIT  NONE
-	INTEGER(KIND=4)::coupled_code 
 
   CONTAINS
 ! </f>
@@ -50,9 +50,13 @@ MODULE system_main
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
-	! Call this to check the time_step, initial condition and output folder creation.
-	! Does time_step check, initial condition and writing details of simulation
-	! Allocating the evolution arrays, if everything is set, 'sys_status' will be 1.
+	! Call this to do the following 
+	! * -> Check the value of time step
+	! * -> Initializes the parameters in the EDQNM problem
+	! If everything is set, 'sys_status' will be 1.
+	! * -> Initialize the initial condition
+	! * -> Output folder creation.
+	! * -> Allocating the evolution arrays, 
 	! -------------
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -61,7 +65,7 @@ MODULE system_main
 	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	!       T    I    M     E              S    T    E    P              C   H    E   C   K
 	!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	IF ( dt .LT. MIN( time_visc, time_rms_V, time_diff ) ) THEN
+	IF ( dt .LT. MIN( time_visc, time_rms_V, time_rms_B , time_diff ) ) THEN
 
 		sys_status = 1
 
@@ -76,22 +80,14 @@ MODULE system_main
 
 		IF ( sys_status .EQ. 1 ) THEN ! Checked again in triad debug
 
-			! CALL IC_V_large_eddies
-			CALL IC_V_read_from_file
-			! CALL IC_V_power_law
-			! REF-> <<< system_initialcondition >>>
-
-			CALL compute_eddy_damping
+			CALL prepare_initial_condition
 			! REF-> <<< system_basicfunctions >>>
 
 			CALL allocate_solver_arrays
 			! REF-> <<< system_solver >>>
 
-			! CALL allocate_flux_decomposition_arrays
+			CALL allocate_flux_decomposition_arrays
 			! REF-> <<< system_advfunctions >>>
-
-			CALL prepare_output
-			! REF-> <<< system_basicoutput >>>
 
 		END IF
 
@@ -125,15 +121,14 @@ MODULE system_main
 		CALL write_sim_start
 		! REF-> <<< system_basicoutput >>>
 
-		IF ( coupling_status .EQ. 2 ) THEN
-			GOTO 922
-			! Skip to the frozen model
-		END IF
+		!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  K I N E T I C    S P E C T R U M    E V O L U T I O N
+		!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+		! INITIALIZATION OF THE LOOP
 		time_now  = -dt
 		save_ind  = 0
 		t_step    = 0
-		! INITIALIZATION OF THE LOOP
 
 		DO WHILE ( time_now .LT. time_total )
 
@@ -142,7 +137,8 @@ MODULE system_main
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-			CALL rk4_algorithm_V
+			! CALL rk4_algorithm_V
+			CALL ab4_algorithm_V
 			! REF-> <<< system_solver >>>
 			! Updates kinetic energy spectrum as per EDQNM equation for next time step
 
@@ -154,54 +150,69 @@ MODULE system_main
 
 			END IF
 
-			IF ( t_step .GT. t_step_jump ) THEN ! Helps get out the loop in the middle
-
+			IF ( t_step .GT. t_step_jump ) THEN 
+			! Helps get out the loop in the middle, set it in <<< system_basicvariables >>>
 				EXIT
-
 			END IF
 
 			t_step = t_step + 1
 
 		END DO
 
-		922 CONTINUE
-
 		CALL compute_transfer_term_V
 		! REF-> <<< system_solver_eqns >>>
-
-		CALL compute_kinetic_temporal_data
-		! REF-> <<< system_basicfunctions >>>
 
 		IF ( coupling_status .NE. 0 ) THEN 
 
 			CALL prepare_perturbation_dynamo
+			! Gets the magnetic spectrum initialized and ready for evolution, either coupled or frozen
 			! REF-> <<< system_basicfunctions >>>
 
+			coupled_code = 1
+			! Stating that the coupling is happening.
+
 		ELSE 
+
 			GOTO 923
-			! Skip the dynamo model
+			! Skip the MHD evolution
+
 		END IF
 
-		time_now = -dt
-		save_ind = 0
-		t_step   = 0
+		!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  K I N E T I C    A N D     M A G N E T I C    S P E C T R U M
+		!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 		! INITIALIZATION OF THE LOOP
+		time_now  = -dt
+		save_ind  = 0
+		t_step    = 0
 
 		DO WHILE ( time_now .LT. time_total )
-
-			coupled_code = 1
 
 			CALL inter_analysis
 
 			! CALL compute_adaptive_time_step
+			! Use it if the dt is chosen large, and energy spectrum becomes negative at some time.
 		  ! REF-> <<< system_solver_eqns >>>
 
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+			IF ( coupling_status .EQ. 1 ) THEN 
+
+				! CALL rk4_algorithm
 				CALL ab4_algorithm
 				! REF-> <<< system_solver >>>
 				! Updates velocity and magnetic field spectrum as per EDQNM-MHD equation for next time step
+
+			ELSE 
+
+				! CALL rk4_algorithm_B
+				CALL ab4_algorithm_B
+				! REF-> <<< system_solver >>>
+				! Updates only the magnetic field spectrum as per EDQNM-MHD equation for next time step
+
+			END IF
 
 			IF ( nan_status .EQ. 1 ) THEN
 
@@ -233,7 +244,8 @@ MODULE system_main
 ! <f
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
-	! This does all the inter_analysis, making calls to write output during the evolution, debug and statistics part.
+	! This does the analysis of functions in between the time steps,
+	! making calls to write output during the evolution, debug and statistics part.
 	! -------------
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -249,6 +261,9 @@ MODULE system_main
 		save_pointer = CEILING( ( time_now + tol_double ) / time_save )
 		! A pointer that shows when the data has to be saved 
 
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		! SAVING SPECTRUM AT SELECTED INTERVALS
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		IF ( save_pointer .GT. save_ind ) THEN
 
 			WRITE (file_time,f_d8p4) save_ind * time_save
@@ -256,7 +271,7 @@ MODULE system_main
 
 			save_ind = save_ind + 1
 
-			IF ( coupling_status .NE. 2 ) THEN
+			IF ( coupled_code .EQ. 0 ) THEN
 
 				CALL compute_transfer_term_V
 					! REF-> <<< system_solver_eqns >>>
@@ -264,47 +279,89 @@ MODULE system_main
 				CALL compute_kinetic_spectral_data
 				! REF-> <<< system_basicfunctions >>>
 
-				! CALL compute_flux_decomposition
+				CALL compute_flux_decomposition_V
 				! REF-> <<< system_advfunctions >>>
 
-			END IF
+			ELSE IF ( coupling_status .EQ. 1 ) THEN
 
-			IF ( ( coupling_status .NE. 0 ) .AND. ( coupled_code .EQ. 1 ) ) THEN
+				CALL compute_transfer_term_V
+					! REF-> <<< system_solver_eqns >>>
 
 				CALL compute_transfer_term_B
 				! REF-> <<< system_solver_eqns >>>
 
+				CALL compute_kinetic_spectral_data
+				! REF-> <<< system_basicfunctions >>>
+
+				CALL compute_magnetic_spectral_data
+				! REF-> <<< system_basicfunctions >>>
+
+				CALL compute_flux_decomposition_B_self
+				CALL compute_flux_decomposition_B_intr
+				! REF-> <<< system_advfunctions >>>
+
 				! CALL dynamo_rate_calc
+				! REF-> <<< system_solver_eqns >>>
+
+			ELSE IF ( coupling_status .EQ. 2 ) THEN
+
+				CALL compute_transfer_term_B
 				! REF-> <<< system_solver_eqns >>>
 
 				CALL compute_magnetic_spectral_data
 				! REF-> <<< system_basicfunctions >>>
 
+				CALL compute_flux_decomposition_B_self
+				CALL compute_flux_decomposition_B_intr
+				! REF-> <<< system_advfunctions >>>
+
+				! CALL dynamo_rate_calc
+				! REF-> <<< system_solver_eqns >>>
+
 			END IF
 
 		END IF
 
-		IF ( coupling_status .NE. 2 ) THEN
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  SAVING TEMPORAL DATA AT EVERY TIMESTEP
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		IF ( coupled_code .EQ. 0 ) THEN
 
 			CALL compute_kinetic_temporal_data
 			! REF-> <<< system_basicfunctions >>>
 
-		END IF
+		ELSE IF ( coupling_status .EQ. 1 ) THEN
 
-		IF ( ( coupling_status .NE. 0 ) .AND. ( coupled_code .EQ. 1 ) ) THEN
+			CALL compute_kinetic_temporal_data
+			! REF-> <<< system_basicfunctions >>>
+
+			CALL compute_magnetic_temporal_data
+			! REF-> <<< system_basicfunctions >>>
+
+		ELSE IF ( coupling_status .EQ. 2 ) THEN
 
 			CALL compute_magnetic_temporal_data
 			! REF-> <<< system_basicfunctions >>>
 
 		END IF
 
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  CALCULATING FORCING
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		IF ( forc_status .EQ. 1 ) THEN
-
-			CALL compute_forcing_spectrum
-			! REF-> <<< system_basicfunctions >>>
-
+			IF ( coupled_code .EQ. 0 ) THEN
+				CALL compute_forcing_spectrum
+				! REF-> <<< system_basicfunctions >>>
+			ELSE IF( coupling_status .EQ. 1) THEN
+				CALL compute_forcing_spectrum
+				! REF-> <<< system_basicfunctions >>>
+			END IF
+			! No need for the frozen model in the second half
 		END IF
 
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		!  CALCULATING EDDY DAMPING TIMESCALES
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 		CALL compute_eddy_damping
 		! REF-> <<< system_basicfunctions >>>
 
@@ -318,7 +375,7 @@ MODULE system_main
 
 			energy_V     = SUM( en_spec_V * wno_band )
 			energy_B     = SUM( en_spec_B * wno_band )
-			energy_tot   =  energy_V + energy_B
+			energy_tot   = energy_V + energy_B
 
 			CALL print_running_status
 			! REF-> <<< system_basicoutput >>>
@@ -344,7 +401,7 @@ MODULE system_main
 		CALL deallocate_solver_arrays
 		! REF-> <<< system_solver >>>
 
-		! CALL deallocate_flux_decomposition_arrays
+		CALL deallocate_flux_decomposition_arrays
 		! REF-> <<< system_advfunctions >>>
 
 		CALL deallocate_system_arrays

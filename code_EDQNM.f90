@@ -11,23 +11,19 @@
 ! ---------   ----------  ----------  /            \  |      \|
 ! --------------------------------------------------------------
 ! #########################
-! PROGRAM NAME : EDQNM-MHD d-dim
+! PROGRAM NAME : EDQNM_MHD_alpha_D3
 ! _____________________________________
 ! #########################
-! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-! PROGRAM FOR SOLVING 'D' DIMENSIONAL EDQNM EQUATION
-! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+! PROGRAM FOR SOLVING 3-DIMENSIONAL EDQNM-MHD ALPHA VARIANT EQUATION  
+! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 ! </f>
-PROGRAM EDQNM
+PROGRAM EDQNM_MHD_alpha_D3
 ! <f
 ! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ! ------------
-! * This program solves the 'd' dimensional EDQNM equation, refer Orsag 1970.
-! * Also the MHD-model based on the EDQNM model.
-! * It is equipped to solve in 'd' dimension, where 'd' is a parameter that can be specified.
-! * Other inputs involve, total energy, initial condition and viscosity.
-! * The system is solved in 'N' wavenumbers, spaced logarithmically. Not recommended to change the spacing.
-! * Subroutines and functions are referenced to their corresponding modules below the calling statement, unless they are in the same module or program.
+! - This code solves the 3-dimensional Eddy Damped Quasi-Normal Markovian Magneto Hydrodynamical (EDQNM-MHD) equation, refer to *Orsag 1970, Pouquet 1976* for more details.
+! - In this model, a variation is implemented in the eddy damping timescale that is parameterised by $\alpha$, hence the name.
 ! -------------
 ! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
@@ -51,16 +47,15 @@ CHARACTER(LEN=5)::run
 	CALL read_input
 	! REF-> <<< system_basicvarables >>>
 
-	! For changing dimensions in batch scripts
-	! DIM_D = GHD
-	DIM_D = 300
-
-	! For changing prandl number in batch scripts
+!==================================================================
+	! FOR CHANGING KINETIC AND MAGNETIC REYNOLDS NUMBER IN BATCH SCRIPTS
 	! U_GRID=XXX
 	! W_GRID=YYY
 
+	! USE THESE FOR A SINGLE KINETIC AND MAGNETIC REYNOLDS NUMBER
 	U_GRID = 1
 	W_GRID = 1
+!==================================================================
 
 	CALL init_global_variables
 	! REF-> <<< system_basicvariables >>>
@@ -78,7 +73,7 @@ CHARACTER(LEN=5)::run
 
 	IF ( (run .EQ. 'y') .AND. ( sys_status .EQ. 1 ) ) THEN
 
-		CALL  time_evolution ! Solve the EDQNM equation, in discrete time
+		CALL  time_evolution ! Solve the equation, in discrete time steps
 		! REF-> <<< system_main >>>
 
 	END IF
@@ -93,4 +88,4 @@ CHARACTER(LEN=5)::run
 
 	END IF
 
-END PROGRAM EDQNM
+END PROGRAM EDQNM_MHD_alpha_D3

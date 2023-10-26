@@ -12,7 +12,7 @@
 ! --------------------------------------------------------------
 ! ##################
 ! MODULE NAME  : system_basicoutput
-! LAST MODIFIED: 15 NOV 2022
+! LAST MODIFIED: 15 OCT 2023
 ! ##################
 
 ! TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
@@ -90,24 +90,28 @@ MODULE system_basicoutput
 		IMPLICIT  NONE
 
 		path_dir    =   '../data/'
-		! path of the main directory relative to this file.
+		! Path of the main directory relative to this file.
 
-		sub_dir_sp  =   'spec/'
-		! Sub directory name to store spectral data
+		IF ( coupling_status .EQ. 0 ) THEN
+			type_sim    =  'kinetic'
+		ELSE IF ( coupling_status .EQ. 1 ) THEN
+			type_sim    =  'coupled'
+		ELSE IF ( coupling_status .EQ. 2 ) THEN
+			type_sim    =  'frozen'
+		END IF
 
-		! type_sim    =  'N' // TRIM( ADJUSTL( N_char ) ) // '/'
-		! type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '_U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
-		type_sim    =  'D' // TRIM( ADJUSTL( dim_char ) ) // '-MHD-alpha/'
+		type_sim    =  TRIM( ADJUSTL( type_sim) ) // '_N' // TRIM( ADJUSTL( N_char ) ) //  '/'
 		! type of simulation, the data is storing
 
-		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
-		! name_sim    =  'D' // TRIM( ADJUSTL( dim_char ) )
-
 		! CALL get_simulation_name(name_sim)
-		name_sim    = 'run_m1'
-		name_sim    =  TRIM(ADJUSTL(name_sim)) // '/'
+		! To include the date and time to name the simulation
 		! REF-> <<< system_auxilaries >>>
-		! Creating dated and timed name for the simulation for this particular type
+
+		! name_sim    =  'U' // TRIM( ADJUSTL( U_char ) ) // 'W' // TRIM( ADJUSTL( W_char ) ) // '/'
+		! To name according to the viscosity and diffusivity
+
+		name_sim    = 'A'//TRIM(ADJUSTL(A_char))//'_U'//TRIM(ADJUSTL(U_char))//'_W'//TRIM(ADJUSTL(W_char))//'/'
+		! To name according to the alpha values 
 
 		! name_sim    =   'test_sim'
 		! Use this to give CUSTOM SIMULATION NAME
@@ -116,6 +120,9 @@ MODULE system_basicoutput
 		                 TRIM( ADJUSTL( name_sim ) ) // 'kin/'
 		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
 		! this address
+
+		sub_dir_sp  =   'spec/'
+		! Sub directory name to store spectral data
 
 	END
 ! </f>
@@ -147,15 +154,16 @@ MODULE system_basicoutput
 	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 	! ------------
 	! CALL THIS SUBROUTINE TO:
-	! Create the directories for dynamo study after EDQNM steady state.
+	! Create the directories for dynamo study after the kinetic spectrum has reached steady state.
 	! -------------
 	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 		IMPLICIT  NONE
 
 		file_address =   TRIM( ADJUSTL( path_dir ) ) // TRIM( ADJUSTL( type_sim ) ) //  &
 		                 TRIM( ADJUSTL( name_sim ) ) // 'dyn/'
-		! Address should be added to all file names, if needed sub-dir can be declared later and appended to
+		! Address should be added to all file names, if needed sub-dir can be declared later and appended to 
 		! this address
+
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) )
 		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // TRIM( ADJUSTL( sub_dir_sp ) ) )
 		! Command to create the main directory and sub directories (name_sim) in the desired path
@@ -198,7 +206,6 @@ MODULE system_basicoutput
 			WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
@@ -218,10 +225,9 @@ MODULE system_basicoutput
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-			WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Localness in Fl.Decom',          '= ',loc_par
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 
 			CLOSE(233)
 			! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -232,7 +238,6 @@ MODULE system_basicoutput
 			WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
@@ -252,10 +257,9 @@ MODULE system_basicoutput
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-			WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Localness in Fl.Decom',          '= ',loc_par
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 		ELSE 
 			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
 			WRITE(233,"(A40)")TRIM(ADJUSTL('------  EDQNM-MHD  EQUATION----------------------'))
@@ -263,7 +267,6 @@ MODULE system_basicoutput
 			WRITE(233,"(A40)")TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 			WRITE(233,"(A40)")TRIM(ADJUSTL('--------------------------------------------------------------------'))
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
@@ -291,12 +294,11 @@ MODULE system_basicoutput
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 			WRITE(233,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 			WRITE(233,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-			WRITE(233,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Localness in Fl.Decom',          '= ',loc_par
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 			WRITE(233,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-			WRITE(233,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 
 			CLOSE(233)
 			! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -307,7 +309,6 @@ MODULE system_basicoutput
 			WRITE(*,"(A40)") TRIM(ADJUSTL('-----------PARAMETERS OF SIMULATION------------'))
 			WRITE(*,"(A40)") TRIM(ADJUSTL('--------------------------------------------------------------------'))
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' No of modes    ',                '= ',N
-			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Dimension of sys',               '= ',dim
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Time step   ',                   '= ',dt
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Total time ',                    '= ',time_total
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total time steps   ',            '= ',t_step_total
@@ -335,12 +336,11 @@ MODULE system_basicoutput
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Int. wavenumber  ',              '= ',wno( kI_ind )
 			WRITE(*,"(A1,A20,A2,F8.2)")    '*',' Forc wavenumber  ',              '= ',wno( kF_ind )
 			WRITE(*,"(A1,A20,A2,I8)")      '*',' Total Triad count ',             '= ',triad_count
-			WRITE(*,"(A1,A20,A2,I8)")      '*',' Deleted triads ',                '= ',triad_deleted
+			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Localness in Fl.Decom',          '= ',loc_par
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "b" ',            '= ',er_V_self
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "c" ',            '= ',er_VB
 			WRITE(*,"(A1,A20,A2,ES8.2)")   '*',' Error in G.fac "h" ',            '= ',er_B_self
 			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Eddy const',                     '= ',eddy_const
-			WRITE(*,"(A1,A20,A2,F8.3)")    '*',' Dim const',                      '= ',dim_const
 		END IF
 
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -357,11 +357,14 @@ MODULE system_basicoutput
 		CLOSE(818)
 		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-		CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // 'triads/' )
-		DO k_ind = 1, N, 3
-			CALL write_triad( k_ind )
-		END DO
+		! UNCOMMENT TO WRITE THE TRIADS
 		! Writes all possible q,p for given k
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+		! CALL SYSTEM('mkdir ' // TRIM( ADJUSTL ( file_address ) ) // 'triads/' )
+		! DO k_ind = 1, N, 3
+			! CALL write_triad( k_ind )
+		! END DO
+		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 	END
 ! </f>
@@ -467,55 +470,23 @@ MODULE system_basicoutput
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_V( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_V( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V( k_ind )
-			IF ( coupling_status .NE. 0 ) THEN
+			IF ( coupled_code .EQ. 1 ) THEN
 				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_self( k_ind )
 				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_V_intr( k_ind )
 			END IF
 			IF ( visc_status .EQ. 1 ) THEN
-				WRITE(882,f_d32p17,ADVANCE = 'no')visc * laplacian_k( k_ind ) * en_spec_V( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'no') two * visc * laplacian_k( k_ind ) * en_spec_V( k_ind )
 			END IF
 			IF ( forc_status .EQ. 1 ) THEN
-				WRITE(882,f_d32p17,ADVANCE = 'yes')fr_spec( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'no')fr_spec( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'yes')eddy_V( k_ind )
 			ELSE
-				WRITE(882,f_d32p17,ADVANCE = 'yes')zero
+				WRITE(882,f_d32p17,ADVANCE = 'yes')eddy_V( k_ind )
 			END IF
 
 		END DO
 
 		CLOSE(882)
-
-  END
-! </f>
-
-	SUBROUTINE write_eddy_spectrum()
-	! <f
-	! INFO - START  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	! ------------
-	! CALL THIS SUBROUTINE TO:
-	! Write all spectral data in a single file (optional)
-	! -------------
-	! INFO - END <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-		IMPLICIT NONE
-		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		!  P  R  I  N   T          O  U  T  P  U  T
-		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		file_name = TRIM( ADJUSTL( file_address ) ) // TRIM( ADJUSTL ( sub_dir_sp )) &
-		            // 'eddy_spectrum_V_t_'// TRIM( ADJUSTL( file_time ) ) // '.dat'
-
-		!  ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		OPEN(UNIT = 884, FILE = file_name)
-
-		DO k_ind = 1, N
-
-			WRITE(884,f_d12p6,ADVANCE = 'no')  wno( k_ind )
-			WRITE(884,f_d32p17,ADVANCE = 'no') eddy_const * DSQRT( SUM( en_spec_V( :k_ind ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) )
-			WRITE(884,f_d32p17,ADVANCE = 'no') eddy_V( k_ind )
-			WRITE(884,f_d32p17,ADVANCE = 'yes') visc * laplacian_k( k_ind)
-
-		END DO
-
-		CLOSE(884)
 
   END
 ! </f>
@@ -541,18 +512,18 @@ MODULE system_basicoutput
 
 		DO k_ind = 1, N
 
-			WRITE(882,f_d12p6,ADVANCE = 'no')  wno( k_ind )
+			WRITE(882,f_d12p6,ADVANCE = 'no') wno( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')fl_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B( k_ind )
 			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_self( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
+			WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind ) / laplacian_k( k_ind )
 			IF ( diff_status .EQ. 1 ) THEN
-				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
-				WRITE(882,f_d32p17,ADVANCE = 'no')en_spec_B( k_ind )/ laplacian_k( k_ind )
-				WRITE(882,f_d32p17,ADVANCE = 'yes')diff * laplacian_k( k_ind ) * en_spec_B( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'no') two * diff * laplacian_k( k_ind ) * en_spec_B( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'yes')eddy_B( k_ind )
 			ELSE
-				WRITE(882,f_d32p17,ADVANCE = 'no')tr_spec_B_intr( k_ind )
-				WRITE(882,f_d32p17,ADVANCE = 'yes')en_spec_B( k_ind )/ laplacian_k( k_ind )
+				WRITE(882,f_d32p17,ADVANCE = 'yes')eddy_B( k_ind )
 			END IF
 			! WRITE(882,f_d32p17,ADVANCE = 'yes')dyn_rate_spec( k_ind )
 
@@ -599,6 +570,7 @@ MODULE system_basicoutput
 		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V
 		WRITE(4004,f_d32p17,ADVANCE ='no')  ds_rate_net_V + ds_rate_net_B
 		WRITE(4004,f_d32p17,ADVANCE ='no')  energy_tot
+		WRITE(4004,f_d32p17,ADVANCE ='no')  wno_diss_V
 		WRITE(4004,f_d32p17,ADVANCE ='yes') skewness
 
 		IF ( t_step .EQ. t_step_total ) THEN
