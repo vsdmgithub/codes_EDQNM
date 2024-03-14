@@ -24,5 +24,5 @@
 ### SBATCH --mail-type=ALL
 
 date
-time ./ex_DIM_GHD
+time ./ex_A2b3
 date

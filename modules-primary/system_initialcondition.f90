@@ -72,7 +72,8 @@ MODULE system_initialcondition
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!  I   N   I   T   I   A   L              C    O    N    D    I    T    I    O     N
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-		spec_exp = -5.0D0/3.0D0
+		! spec_exp = -5.0D0/3.0D0
+		spec_exp = - ( 16.0D0 - 9.0D0 * eddy_damping_exp ) / ( 8.0D0 - 3.0D0 * eddy_damping_exp )
 		en_spec_V = wno**spec_exp
 		en_spec_V = energy_V_0 * en_spec_V / SUM( en_spec_V * wno_band )
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

@@ -201,6 +201,7 @@ MODULE system_basicfunctions
 
 		IMPLICIT NONE
 		DOUBLE PRECISION::eddy_0
+
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 		!   E  D  D  Y            F  R  E  Q  U  E  N  C  Y
 		! XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -211,18 +212,37 @@ MODULE system_basicfunctions
 		IF ( wno_diss_V .GT. wno( N ) ) THEN
 			kD_V_ind   = N
 		END IF
-		!kD_V_ind = 37
-		! For custom use
 
+		!kD_V_ind = 37
+		! FOR CUSTOM USE
 
 		eddy_0 = DSQRT( SUM( ( en_spec_V( :kD_V_ind ) + en_spec_B( :kD_V_ind ) ) * laplacian_k( :kD_V_ind ) * wno_band( :kD_V_ind ) ) )
+		! Eddy time-scale at the dissipative wavenumber
+
 		DO k_ind = 1, N
+
 			eddy_V( k_ind ) = DSQRT( SUM( ( en_spec_V( :k_ind ) + en_spec_B( :k_ind ) ) * laplacian_k( :k_ind ) * wno_band( :k_ind ) ) )
+			! Eddy time-scale at the 'i'th wavenumber
+
 			IF ( coupling_status .NE. 0 ) THEN
-				eddy_B( k_ind ) = eddy_const * ( eddy_0 ** eddy_exp_C ) * ( eddy_V( k_ind ) ** eddy_exp ) + diff * laplacian_k( k_ind )
+
+				! eddy_B( k_ind ) = eddy_const * ( eddy_0 ** eddy_exp_C ) * ( eddy_V( k_ind ) ** eddy_exp ) + diff * laplacian_k( k_ind )
+				! When '\alpha' effect is included for 'B'.
+
+				eddy_B( k_ind ) = eddy_const * eddy_V( k_ind ) + diff * laplacian_k( k_ind )
+				! When '\alpha' effect is not included for 'B'.
+
 				eddy_B( k_ind ) = eddy_B( k_ind ) + alfven_const * wno( k_ind ) * DSQRT( DABS(SUM( en_spec_B( :k_ind ) * wno_band( :k_ind ))))
+				! Additional Alfven velocity time-scale
+
 			END IF
-			eddy_V( k_ind ) = eddy_const * ( eddy_0 ** eddy_exp_C ) * ( eddy_V( k_ind ) ** eddy_exp ) + visc * laplacian_k( k_ind )
+
+			! eddy_V( k_ind ) = eddy_const * ( eddy_0 ** eddy_exp_C ) * ( eddy_V( k_ind ) ** eddy_exp ) + visc * laplacian_k( k_ind )
+			! When '\alpha' effect is included for 'U'.
+
+			eddy_V( k_ind ) = eddy_const * eddy_V( k_ind )  + visc * laplacian_k( k_ind )
+			! When '\alpha' effect is not included for 'U'.
+
 		END DO
 
 	END
@@ -423,7 +443,8 @@ MODULE system_basicfunctions
 
 		IMPLICIT  NONE
 
-		CALL IC_V_large_eddies
+		! CALL IC_V_large_eddies
+		CALL IC_V_power_law
 		! REF-> <<< system_initialcondition >>>
 		
 		CALL compute_eddy_damping

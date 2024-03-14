@@ -212,17 +212,17 @@ IMPLICIT  NONE
 		forc_status                            = 1
 		! '1' TO ACTIVATE FORCING, '0' FOR DECAYING CASE (ONLY FOR KINETIC SPECTRUM)
 
-		coupling_status                        = 0
+		coupling_status                        = 2
 		! '1' FOR COUPLED CASE
 		! '0' FOR PURE KINETIC CASE
 		! '2' FOR ONE-WAY COUPLED CASE, WITH A FIXED E(K)
 
-		jump_loc                               = 0.4D0
+		jump_loc                               = zero
 
 		energy_0                               = one
 		! TOTAL ENERGY 
 
-		energy_B_0                             = zero
+		energy_B_0                             = 1E-2
 		! INITIAL MAGNETIC ENERGY
 
 		energy_V_0                             = energy_0 - energy_B_0
@@ -232,19 +232,23 @@ IMPLICIT  NONE
 		energy_V_prev                          = energy_V_0
 		! Initial kinetic energy
 
-		eddy_damping_exp                       = 2.0D0/3.0D0
+		eddy_damping_exp                       = zero
+		! eddy_damping_exp                       = 2.0D0/3.0D0
+		! eddy_damping_exp                       = 8.0D0/9.0D0
+
 		! THE EXPONENT IN THE MODEL
 
 		! WRITE (A_char, f_i8) FLOOR( eddy_damping_exp * 100) 
 		! A_char = 'm2'			! -2
 		! A_char = 'm1'			! -1
-		! A_char = 'zer'		!  0
+		A_char = 'zer'		!  0
 		! A_char = '1b4'		!  0.25
 		! A_char = '1b3'		!  0.33
 		! A_char = '1b2'		!  0.5
 		! A_char = '8b15'		!  0.53
-		A_char = '2b3'		!	 0.66
+		! A_char = '2b3'		!	 0.66
 		! A_char = '3b4'		!  0.75
+		! A_char = '8b9'		!  0.89
 		! A_char = '1'			!  1.0
 		! A_char = '5b4' 		!  1.25
 		! A_char = '4b3' 		!  1.33

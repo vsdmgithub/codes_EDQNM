@@ -55,7 +55,7 @@ ex:$(ob)
 	$(cc) -c $(solver_mod)
 	$(cc) -c $(advfunctions_mod)
 	$(cc) -c $(main_mod)
-	$(cc) $(program) $(obj) -o ex_A2b3
+	$(cc) $(program) $(obj) -o ex_zer
 	$(mkcl)
 # 	$(run)
 

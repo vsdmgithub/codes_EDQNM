@@ -134,6 +134,12 @@ MODULE system_main
 
 			CALL inter_analysis
 
+			IF ( t_step .GE. t_step_jump ) THEN 
+			! Helps get out the loop in the middle, set it in <<< system_basicvariables >>>
+			PRINT*,"***GOT OUT OF THE LOOP***"
+				EXIT
+			END IF
+
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 			!  P  S  E  U  D  O  -  S  P  E  C  T  R  A  L     A  L   G  O  R  I  T  H  M
 			!  +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -148,11 +154,6 @@ MODULE system_main
 				! REF-> <<< system_basicoutput >>>
 				EXIT ! Meaning 'NaN' is encountered during the Debug
 
-			END IF
-
-			IF ( t_step .GT. t_step_jump ) THEN 
-			! Helps get out the loop in the middle, set it in <<< system_basicvariables >>>
-				EXIT
 			END IF
 
 			t_step = t_step + 1
